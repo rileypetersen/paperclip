@@ -104,6 +104,7 @@ export const notificationsCommandConfigSchema = z.object({
 export const notificationsConfigSchema = z.object({
   provider: z.enum(NOTIFICATION_PROVIDERS).default("disabled"),
   boardEmails: z.array(z.string().email()).default([]),
+  webhookUrl: z.string().url().optional(),
   command: notificationsCommandConfigSchema.default({
     args: [],
   }),
@@ -184,6 +185,14 @@ export const paperclipConfigSchema = z
         code: z.ZodIssueCode.custom,
         message: "auth.publicBaseUrl is required when deploymentMode=authenticated and exposure=public",
         path: ["auth", "publicBaseUrl"],
+      });
+    }
+
+    if (value.notifications.provider === "webhook" && !value.notifications.webhookUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "notifications.webhookUrl is required when provider is webhook",
+        path: ["notifications", "webhookUrl"],
       });
     }
   });
