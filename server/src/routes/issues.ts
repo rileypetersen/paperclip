@@ -29,7 +29,7 @@ import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { shouldWakeAssigneeOnCheckout } from "./issues-checkout-wakeup.js";
 import { isAllowedContentType, MAX_ATTACHMENT_BYTES } from "../attachment-types.js";
 
-export function issueRoutes(db: Db, storage: StorageService, notifications: BoardNotificationService) {
+export function issueRoutes(db: Db, storage: StorageService, notifications: { current: BoardNotificationService }) {
   const router = Router();
   const svc = issueService(db);
   const access = accessService(db);
@@ -444,7 +444,7 @@ export function issueRoutes(db: Db, storage: StorageService, notifications: Boar
       details: { title: issue.title, identifier: issue.identifier },
     });
 
-    await notifications.notifyIssueCreated(issue);
+    await notifications.current.notifyIssueCreated(issue);
 
     if (issue.assigneeAgentId && issue.status !== "backlog") {
       void heartbeat
@@ -554,7 +554,7 @@ export function issueRoutes(db: Db, storage: StorageService, notifications: Boar
       },
     });
 
-    await notifications.notifyIssueUpdated({
+    await notifications.current.notifyIssueUpdated({
       before: existing,
       after: issue,
     });
@@ -585,7 +585,7 @@ export function issueRoutes(db: Db, storage: StorageService, notifications: Boar
       });
 
       const latestIssue = await svc.getById(id);
-      await notifications.notifyIssueComment({
+      await notifications.current.notifyIssueComment({
         issue: latestIssue ?? issue,
         comment,
       });

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { paperclipConfigSchema, type PaperclipConfig } from "@paperclipai/shared";
 import { resolvePaperclipConfigPath } from "./paths.js";
 
@@ -13,4 +14,20 @@ export function readConfigFile(): PaperclipConfig | null {
   } catch {
     return null;
   }
+}
+
+export function writeConfigFile(config: PaperclipConfig): void {
+  const configPath = resolvePaperclipConfigPath();
+  const dir = path.dirname(configPath);
+  fs.mkdirSync(dir, { recursive: true });
+
+  if (fs.existsSync(configPath)) {
+    const backupPath = configPath + ".backup";
+    fs.copyFileSync(configPath, backupPath);
+    fs.chmodSync(backupPath, 0o600);
+  }
+
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", {
+    mode: 0o600,
+  });
 }

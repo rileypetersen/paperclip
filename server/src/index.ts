@@ -27,9 +27,11 @@ import { logger } from "./middleware/logger.js";
 import { setupLiveEventsWebSocketServer } from "./realtime/live-events-ws.js";
 import {
   createNotificationService,
+  createWebhookNotificationProvider,
   heartbeatService,
   reconcilePersistedRuntimeServicesOnStartup,
 } from "./services/index.js";
+import { resolveNotificationsConfig } from "./config.js";
 import { createStorageServiceFromConfig } from "./storage/index.js";
 import { printStartupBanner } from "./startup-banner.js";
 import { getBoardClaimWarningUrl, initializeBoardClaimChallenge } from "./board-claim.js";
@@ -474,12 +476,37 @@ export async function startServer(): Promise<StartedServer> {
       ? "localhost"
       : config.host;
   const runtimeApiUrl = `http://${runtimeApiHost}:${listenPort}`;
-  const notificationService = createNotificationService({
-    db: db as any,
-    config: config.notifications,
-    authPublicBaseUrl: config.authPublicBaseUrl,
-    runtimeBaseUrl: runtimeApiUrl,
-  });
+  const initialWebhookProvider =
+    config.notifications.provider === "webhook" && config.notifications.webhookUrl
+      ? createWebhookNotificationProvider(config.notifications.webhookUrl)
+      : undefined;
+  const notificationRef = {
+    current: createNotificationService({
+      db: db as any,
+      config: config.notifications,
+      provider: initialWebhookProvider,
+      authPublicBaseUrl: config.authPublicBaseUrl,
+      runtimeBaseUrl: runtimeApiUrl,
+    }),
+  };
+
+  const dbRef = db as any;
+  function reloadNotificationConfig() {
+    const newConfig = resolveNotificationsConfig();
+    const provider =
+      newConfig.provider === "webhook" && newConfig.webhookUrl
+        ? createWebhookNotificationProvider(newConfig.webhookUrl)
+        : undefined;
+    notificationRef.current = createNotificationService({
+      db: dbRef,
+      config: newConfig,
+      provider,
+      authPublicBaseUrl: config.authPublicBaseUrl,
+      runtimeBaseUrl: runtimeApiUrl,
+    });
+    logger.info("notification service reloaded with new config");
+  }
+
   const app = await createApp(db as any, {
     uiMode,
     serverPort: listenPort,
@@ -490,7 +517,9 @@ export async function startServer(): Promise<StartedServer> {
     bindHost: config.host,
     authReady,
     companyDeletionEnabled: config.companyDeletionEnabled,
-    notificationService,
+    notificationService: notificationRef,
+    reloadNotificationConfig,
+    getNotificationsConfig: () => resolveNotificationsConfig(),
     betterAuthHandler,
     resolveSession,
   });
@@ -544,7 +573,7 @@ export async function startServer(): Promise<StartedServer> {
           logger.error({ err }, "heartbeat timer tick failed");
         });
 
-      void notificationService
+      void notificationRef.current
         .tickBoardStalledIssues(now)
         .then((result) => {
           if (result.sent > 0) {
