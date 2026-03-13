@@ -146,12 +146,14 @@ function IssueAttentionRow({
   agentName,
   markRead,
   isFading,
+  isLive,
 }: {
   issue: Issue;
   issueLinkState: unknown;
   agentName: (id: string | null) => string | null;
   markRead: (id: string) => void;
   isFading: boolean;
+  isLive?: boolean;
 }) {
   const awaitingResponse = Boolean(issue.isUnreadForMe) && !isFading;
   const unassigned = isUnassignedIssue(issue);
@@ -208,6 +210,15 @@ function IssueAttentionRow({
           <span className="shrink-0 text-xs font-mono text-muted-foreground">
             {issue.identifier ?? issue.id.slice(0, 8)}
           </span>
+          {isLive && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2 py-0.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-pulse rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+              </span>
+              <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">Live</span>
+            </span>
+          )}
           <span className="min-w-0 flex-1 text-sm font-medium">
             <span className="line-clamp-2 min-w-0 sm:line-clamp-1 sm:block sm:truncate">
               {issue.title}
@@ -521,6 +532,16 @@ export function Inbox() {
     () => getLatestFailedRunsByAgent(heartbeatRuns ?? []).filter((r) => !dismissed.has(`run:${r.id}`)),
     [heartbeatRuns, dismissed],
   );
+
+  const liveIssueIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const run of heartbeatRuns ?? []) {
+      if (run.status !== "running" && run.status !== "queued") continue;
+      const issueId = readIssueIdFromRun(run);
+      if (issueId) ids.add(issueId);
+    }
+    return ids;
+  }, [heartbeatRuns]);
 
   const allApprovals = useMemo(
     () =>
@@ -976,6 +997,7 @@ export function Inbox() {
                   agentName={agentName}
                   markRead={(id) => markReadMutation.mutate(id)}
                   isFading={fadingOutIssues.has(issue.id)}
+                  isLive={liveIssueIds.has(issue.id)}
                 />
               ))}
             </div>
@@ -999,6 +1021,7 @@ export function Inbox() {
                   agentName={agentName}
                   markRead={(id) => markReadMutation.mutate(id)}
                   isFading={fadingOutIssues.has(issue.id)}
+                  isLive={liveIssueIds.has(issue.id)}
                 />
               ))}
             </div>
