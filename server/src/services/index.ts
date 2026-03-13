@@ -16,6 +16,7 @@ export { accessService } from "./access.js";
 export { companyPortabilityService } from "./company-portability.js";
 export {
   createCommandNotificationProvider,
+  createWebhookNotificationProvider,
   createDbNotificationRepository,
   createNotificationService,
   parseBoardNotificationMarker,
@@ -25,6 +26,7 @@ export {
   type BoardNotificationKind,
   type IssueNotificationSnapshot,
   type IssueCommentNotificationSnapshot,
+  type NotificationDeliveryProvider,
 } from "./notifications.js";
 export { logActivity, type LogActivityInput } from "./activity-log.js";
 export { notifyHireApproved, type NotifyHireApprovedInput } from "./hire-hook.js";

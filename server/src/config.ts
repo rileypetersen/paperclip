@@ -34,6 +34,7 @@ type DatabaseMode = "embedded-postgres" | "postgres";
 export interface NotificationsConfig {
   provider: NotificationProvider;
   boardEmails: string[];
+  webhookUrl: string | undefined;
   command: {
     path: string | undefined;
     args: string[];
@@ -103,6 +104,11 @@ export function resolveNotificationsConfig(): NotificationsConfig {
       ? parseEmailList(process.env.PAPERCLIP_BOARD_NOTIFICATION_EMAILS)
       : (fileNotifications?.boardEmails ?? []);
 
+  const webhookUrl =
+    process.env.PAPERCLIP_NOTIFICATIONS_WEBHOOK_URL?.trim() ||
+    fileNotifications?.webhookUrl?.trim() ||
+    undefined;
+
   const commandPath =
     process.env.PAPERCLIP_NOTIFICATIONS_COMMAND?.trim() ||
     fileNotifications?.command.path?.trim() ||
@@ -125,6 +131,7 @@ export function resolveNotificationsConfig(): NotificationsConfig {
   return {
     provider,
     boardEmails,
+    webhookUrl,
     command: {
       path: commandPath,
       args: [...(fileNotifications?.command.args ?? [])],

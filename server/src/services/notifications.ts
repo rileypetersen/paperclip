@@ -71,7 +71,7 @@ export interface BoardMarkerMatch {
   bodySnippet: string;
 }
 
-export interface CommandNotificationProvider {
+export interface NotificationDeliveryProvider {
   provider: NotificationProviderType;
   deliver(notification: BoardNotificationPayload): Promise<{ ok: true } | { ok: false; error: string }>;
 }
@@ -203,7 +203,60 @@ function buildNotificationEmailText(input: {
   return lines.join("\n");
 }
 
-export function createCommandNotificationProvider(config: NotificationsConfig): CommandNotificationProvider {
+function formatDiscordPayload(notification: BoardNotificationPayload) {
+  const colorMap: Record<BoardNotificationKind, number> = {
+    board_assigned: 0x5865f2,
+    board_blocked: 0xed4245,
+    board_stalled: 0xfee75c,
+    board_question: 0x57f287,
+  };
+  return {
+    embeds: [
+      {
+        title: `[${notification.kind}] ${notification.issue.identifier} ${notification.issue.title}`,
+        description: notification.trigger.reason,
+        url: notification.issue.url,
+        color: colorMap[notification.kind] ?? 0x5865f2,
+        fields: [
+          { name: "Company", value: notification.company.name, inline: true },
+          { name: "Status", value: notification.issue.status, inline: true },
+        ],
+        footer: { text: "Paperclip Board Notification" },
+      },
+    ],
+  };
+}
+
+export function createWebhookNotificationProvider(
+  webhookUrl: string,
+): NotificationDeliveryProvider {
+  return {
+    provider: "webhook",
+    async deliver(notification) {
+      try {
+        const isDiscord = webhookUrl.includes("discord.com/api/webhooks/");
+        const body = isDiscord ? formatDiscordPayload(notification) : notification;
+        const response = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!response.ok) {
+          return { ok: false, error: `Webhook returned ${response.status}` };
+        }
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    },
+  };
+}
+
+export function createCommandNotificationProvider(config: NotificationsConfig): NotificationDeliveryProvider {
   return {
     provider: config.provider,
     async deliver(notification) {
@@ -316,7 +369,7 @@ export function createNotificationService(input: {
   config: NotificationsConfig;
   runtimeBaseUrl?: string | undefined;
   authPublicBaseUrl?: string | undefined;
-  provider?: CommandNotificationProvider;
+  provider?: NotificationDeliveryProvider;
   repository?: NotificationRepository;
 }): BoardNotificationService {
   const repository = input.repository ?? createDbNotificationRepository(input.db);
@@ -337,7 +390,10 @@ export function createNotificationService(input: {
     comment?: IssueCommentNotificationSnapshot;
     commentSnippet?: string;
   }) {
-    if (input.config.provider === "disabled" || recipients.length === 0 || !baseUrl) {
+    if (input.config.provider === "disabled" || !baseUrl) {
+      return false;
+    }
+    if (recipients.length === 0 && input.config.provider !== "webhook") {
       return false;
     }
 

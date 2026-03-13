@@ -9,7 +9,7 @@ import {
   createNotificationService,
   parseBoardNotificationMarker,
   type BoardNotificationPayload,
-  type CommandNotificationProvider,
+  type NotificationDeliveryProvider,
   type CompanyNotificationSummary,
   type IssueNotificationSnapshot,
   type NotificationRepository,
@@ -30,6 +30,7 @@ function makeConfig(overrides?: Partial<NotificationsConfig>): NotificationsConf
   const base: NotificationsConfig = {
     provider: "command",
     boardEmails: ["board@example.com"],
+    webhookUrl: undefined,
     command,
     stalledThresholdMinutes: 240,
     stalledCooldownMinutes: 1440,
@@ -173,7 +174,7 @@ describe("createCommandNotificationProvider", () => {
 describe("notification service triggers", () => {
   function createProvider(
     impl?: (notification: BoardNotificationPayload) => Promise<{ ok: true } | { ok: false; error: string }>,
-  ): CommandNotificationProvider & { sent: BoardNotificationPayload[] } {
+  ): NotificationDeliveryProvider & { sent: BoardNotificationPayload[] } {
     const sent: BoardNotificationPayload[] = [];
     return {
       provider: "command",
@@ -419,7 +420,7 @@ describe("notification service stalled work scheduling", () => {
       id: "issue-succeeds",
       updatedAt: new Date("2026-03-12T04:30:00.000Z"),
     });
-    const provider: CommandNotificationProvider = {
+    const provider: NotificationDeliveryProvider = {
       provider: "command",
       async deliver(notification) {
         if (notification.issue.id === "issue-fails") {
@@ -468,5 +469,34 @@ describe("notification service stalled work scheduling", () => {
     });
     const second = await updatedService.tickBoardStalledIssues(new Date("2026-03-12T10:10:00.000Z"));
     expect(second).toEqual({ checked: 0, sent: 0, skipped: 0 });
+  });
+});
+
+describe("createWebhookNotificationProvider", () => {
+  it("returns correct shape with webhook provider type", async () => {
+    const { createWebhookNotificationProvider } = await import("../services/notifications.ts");
+    const provider = createWebhookNotificationProvider("https://example.com/webhook");
+    expect(provider.provider).toBe("webhook");
+    expect(typeof provider.deliver).toBe("function");
+  });
+});
+
+describe("webhook notification with empty boardEmails", () => {
+  it("sends webhook notification even with empty boardEmails", async () => {
+    const provider: NotificationDeliveryProvider = {
+      provider: "webhook",
+      deliver: vi.fn().mockResolvedValue({ ok: true }),
+    };
+    const config = makeConfig({ provider: "webhook", boardEmails: [] });
+    const { repository } = createRepository();
+    const svc = createNotificationService({
+      db: {} as any,
+      config,
+      provider,
+      repository,
+      runtimeBaseUrl: "http://localhost:3100",
+    });
+    await svc.notifyIssueCreated(makeIssue({ assigneeUserId: "local-board" }));
+    expect(provider.deliver).toHaveBeenCalled();
   });
 });

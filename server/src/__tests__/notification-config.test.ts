@@ -28,10 +28,12 @@ describe("resolveNotificationsConfig", () => {
     delete process.env.PAPERCLIP_BOARD_NOTIFICATION_EMAILS;
     delete process.env.PAPERCLIP_STALLED_WORK_THRESHOLD_MINUTES;
     delete process.env.PAPERCLIP_STALLED_WORK_COOLDOWN_MINUTES;
+    delete process.env.PAPERCLIP_NOTIFICATIONS_WEBHOOK_URL;
 
     expect(resolveNotificationsConfig()).toEqual({
       provider: "disabled",
       boardEmails: [],
+      webhookUrl: undefined,
       command: {
         path: undefined,
         args: [],
@@ -100,6 +102,7 @@ describe("resolveNotificationsConfig", () => {
     expect(resolveNotificationsConfig()).toEqual({
       provider: "command",
       boardEmails: ["board@example.com"],
+      webhookUrl: undefined,
       command: {
         path: "/tmp/send-board-email",
         args: ["--flag"],
@@ -107,5 +110,60 @@ describe("resolveNotificationsConfig", () => {
       stalledThresholdMinutes: 45,
       stalledCooldownMinutes: 120,
     });
+  });
+
+  it("resolves webhook provider with webhookUrl from config file", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-notifications-config-"));
+    const configPath = path.join(tempDir, "config.json");
+    process.env.PAPERCLIP_CONFIG = configPath;
+    writeJson(configPath, {
+      $meta: {
+        version: 1,
+        updatedAt: "2026-03-13T00:00:00.000Z",
+        source: "configure",
+      },
+      database: {
+        mode: "embedded-postgres",
+        embeddedPostgresDataDir: "~/.paperclip/instances/default/db",
+        embeddedPostgresPort: 54329,
+        backup: {
+          enabled: true,
+          intervalMinutes: 60,
+          retentionDays: 30,
+          dir: "~/.paperclip/instances/default/data/backups",
+        },
+      },
+      logging: { mode: "file", logDir: "~/.paperclip/instances/default/logs" },
+      server: {
+        deploymentMode: "local_trusted",
+        exposure: "private",
+        host: "127.0.0.1",
+        port: 3100,
+        allowedHostnames: [],
+        serveUi: true,
+      },
+      notifications: {
+        provider: "webhook",
+        webhookUrl: "https://discord.com/api/webhooks/123/abc",
+        boardEmails: [],
+        command: { args: [] },
+        stalledThresholdMinutes: 60,
+        stalledCooldownMinutes: 720,
+      },
+    });
+
+    const config = resolveNotificationsConfig();
+    expect(config.provider).toBe("webhook");
+    expect(config.webhookUrl).toBe("https://discord.com/api/webhooks/123/abc");
+    expect(config.stalledThresholdMinutes).toBe(60);
+  });
+
+  it("resolves webhookUrl from env var", () => {
+    process.env.PAPERCLIP_NOTIFICATIONS_PROVIDER = "webhook";
+    process.env.PAPERCLIP_NOTIFICATIONS_WEBHOOK_URL = "https://hooks.slack.com/test";
+
+    const config = resolveNotificationsConfig();
+    expect(config.provider).toBe("webhook");
+    expect(config.webhookUrl).toBe("https://hooks.slack.com/test");
   });
 });
