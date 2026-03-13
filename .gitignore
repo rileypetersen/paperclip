@@ -47,3 +47,6 @@ logs/
 
 # Skill eval workspace artifacts
 *-workspace/
+
+# Git worktrees
+.worktrees/
