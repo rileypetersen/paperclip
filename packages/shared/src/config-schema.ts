@@ -101,10 +101,21 @@ export const notificationsCommandConfigSchema = z.object({
   args: z.array(z.string()).default([]),
 });
 
+export const discordUserMappingSchema = z.object({
+  discordUserId: z.string().min(1),
+  paperclipUserId: z.string().min(1),
+});
+
+export const discordConfigSchema = z.object({
+  channelId: z.string().min(1),
+  userMappings: z.array(discordUserMappingSchema).min(1),
+});
+
 export const notificationsConfigSchema = z.object({
   provider: z.enum(NOTIFICATION_PROVIDERS).default("disabled"),
   boardEmails: z.array(z.string().email()).default([]),
   webhookUrl: z.string().url().optional(),
+  discord: discordConfigSchema.optional(),
   command: notificationsCommandConfigSchema.default({
     args: [],
   }),
@@ -193,6 +204,14 @@ export const paperclipConfigSchema = z
         code: z.ZodIssueCode.custom,
         message: "notifications.webhookUrl is required when provider is webhook",
         path: ["notifications", "webhookUrl"],
+      });
+    }
+
+    if (value.notifications.provider === "discord" && !value.notifications.discord) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "notifications.discord config is required when provider is discord",
+        path: ["notifications", "discord"],
       });
     }
   });

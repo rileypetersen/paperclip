@@ -173,7 +173,7 @@ export type SecretProvider = (typeof SECRET_PROVIDERS)[number];
 export const STORAGE_PROVIDERS = ["local_disk", "s3"] as const;
 export type StorageProvider = (typeof STORAGE_PROVIDERS)[number];
 
-export const NOTIFICATION_PROVIDERS = ["disabled", "command", "webhook"] as const;
+export const NOTIFICATION_PROVIDERS = ["disabled", "command", "webhook", "discord"] as const;
 export type NotificationProvider = (typeof NOTIFICATION_PROVIDERS)[number];
 
 export const HEARTBEAT_INVOCATION_SOURCES = [
