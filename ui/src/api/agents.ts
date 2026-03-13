@@ -2,6 +2,7 @@ import type {
   Agent,
   AdapterEnvironmentTestResult,
   AgentKeyCreated,
+  AgentConfigFilesResponse,
   AgentRuntimeState,
   AgentTaskSession,
   HeartbeatRun,
@@ -88,6 +89,8 @@ export const agentsApi = {
   },
   getConfiguration: (id: string, companyId?: string) =>
     api.get<Record<string, unknown>>(agentPath(id, companyId, "/configuration")),
+  getConfigFiles: (id: string, companyId?: string) =>
+    api.get<AgentConfigFilesResponse>(agentPath(id, companyId, "/config-files")),
   listConfigRevisions: (id: string, companyId?: string) =>
     api.get<AgentConfigRevision[]>(agentPath(id, companyId, "/config-revisions")),
   getConfigRevision: (id: string, revisionId: string, companyId?: string) =>

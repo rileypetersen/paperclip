@@ -3,6 +3,7 @@ import {
   AUTH_BASE_URL_MODES,
   DEPLOYMENT_EXPOSURES,
   DEPLOYMENT_MODES,
+  NOTIFICATION_PROVIDERS,
   SECRET_PROVIDERS,
   STORAGE_PROVIDERS,
 } from "./constants.js";
@@ -95,6 +96,21 @@ export const secretsConfigSchema = z.object({
   }),
 });
 
+export const notificationsCommandConfigSchema = z.object({
+  path: z.string().optional(),
+  args: z.array(z.string()).default([]),
+});
+
+export const notificationsConfigSchema = z.object({
+  provider: z.enum(NOTIFICATION_PROVIDERS).default("disabled"),
+  boardEmails: z.array(z.string().email()).default([]),
+  command: notificationsCommandConfigSchema.default({
+    args: [],
+  }),
+  stalledThresholdMinutes: z.number().int().min(1).max(7 * 24 * 60).default(240),
+  stalledCooldownMinutes: z.number().int().min(1).max(30 * 24 * 60).default(1440),
+});
+
 export const paperclipConfigSchema = z
   .object({
     $meta: configMetaSchema,
@@ -124,6 +140,15 @@ export const paperclipConfigSchema = z
       localEncrypted: {
         keyFilePath: "~/.paperclip/instances/default/secrets/master.key",
       },
+    }),
+    notifications: notificationsConfigSchema.default({
+      provider: "disabled",
+      boardEmails: [],
+      command: {
+        args: [],
+      },
+      stalledThresholdMinutes: 240,
+      stalledCooldownMinutes: 1440,
     }),
   })
   .superRefine((value, ctx) => {
@@ -176,3 +201,5 @@ export type SecretsLocalEncryptedConfig = z.infer<typeof secretsLocalEncryptedCo
 export type AuthConfig = z.infer<typeof authConfigSchema>;
 export type ConfigMeta = z.infer<typeof configMetaSchema>;
 export type DatabaseBackupConfig = z.infer<typeof databaseBackupConfigSchema>;
+export type NotificationsConfig = z.infer<typeof notificationsConfigSchema>;
+export type NotificationsCommandConfig = z.infer<typeof notificationsCommandConfigSchema>;

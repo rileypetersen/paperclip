@@ -1,0 +1,290 @@
+{
+  "exit_reason": "max_iterations (1)",
+  "original_description": "Use this skill to store, retrieve, update, or organize persistent knowledge using file-based PARA memory. Use when someone says \"remember this\", \"what do you know about X\", \"save this fact\", \"update your memory\", \"run weekly synthesis\", or asks you to recall past context. Covers: creating YAML-based knowledge entities, writing daily notes, running weekly synthesis to consolidate knowledge, searching memory via qmd, and managing memory decay. Use whenever information needs to persist beyond the current conversation \u2014 even if the user doesn't say \"memory\" explicitly.",
+  "best_description": "Use this skill to store, retrieve, update, or organize persistent knowledge using file-based PARA memory. Use when someone says \"remember this\", \"what do you know about X\", \"save this fact\", \"update your memory\", \"run weekly synthesis\", or asks you to recall past context. Covers: creating YAML-based knowledge entities, writing daily notes, running weekly synthesis to consolidate knowledge, searching memory via qmd, and managing memory decay. Use whenever information needs to persist beyond the current conversation \u2014 even if the user doesn't say \"memory\" explicitly.",
+  "best_score": "4/8",
+  "best_train_score": "6/12",
+  "best_test_score": "4/8",
+  "final_description": "Use this skill to store, retrieve, update, or organize persistent knowledge using file-based PARA memory. Use when someone says \"remember this\", \"what do you know about X\", \"save this fact\", \"update your memory\", \"run weekly synthesis\", or asks you to recall past context. Covers: creating YAML-based knowledge entities, writing daily notes, running weekly synthesis to consolidate knowledge, searching memory via qmd, and managing memory decay. Use whenever information needs to persist beyond the current conversation \u2014 even if the user doesn't say \"memory\" explicitly.",
+  "iterations_run": 1,
+  "holdout": 0.4,
+  "train_size": 12,
+  "test_size": 8,
+  "history": [
+    {
+      "iteration": 1,
+      "description": "Use this skill to store, retrieve, update, or organize persistent knowledge using file-based PARA memory. Use when someone says \"remember this\", \"what do you know about X\", \"save this fact\", \"update your memory\", \"run weekly synthesis\", or asks you to recall past context. Covers: creating YAML-based knowledge entities, writing daily notes, running weekly synthesis to consolidate knowledge, searching memory via qmd, and managing memory decay. Use whenever information needs to persist beyond the current conversation \u2014 even if the user doesn't say \"memory\" explicitly.",
+      "train_passed": 6,
+      "train_failed": 6,
+      "train_total": 12,
+      "train_results": [
+        {
+          "query": "What have you learned about how this team handles code reviews?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Ship the v3.0 release",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Write a summary of what changed in the last release",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Store this for future reference: the database credentials rotate every 90 days",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Fix the bug in the user registration flow",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Search your memory for anything related to the payment processing system",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Run the weekly synthesis on your memory files",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "What do you know about the billing module architecture?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Write documentation for the API endpoints",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Set up a new project repository with proper structure",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Remember that Riley prefers dark mode in all applications",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Send Riley an email about the meeting notes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "test_passed": 4,
+      "test_failed": 4,
+      "test_total": 8,
+      "test_results": [
+        {
+          "query": "Save this fact: our SLA target is 99.9% uptime",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Organize your notes about the recent infrastructure migration",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Update your memory \u2014 the deployment process changed last week",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Create a new knowledge entity for the authentication service",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Review PR #45 and explain the changes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Create a new agent for the data team",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Add a comment to issue #12 with the investigation results",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Check my Paperclip tasks and run a heartbeat",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 6,
+      "total": 12,
+      "results": [
+        {
+          "query": "What have you learned about how this team handles code reviews?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Ship the v3.0 release",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Write a summary of what changed in the last release",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Store this for future reference: the database credentials rotate every 90 days",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Fix the bug in the user registration flow",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Search your memory for anything related to the payment processing system",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Run the weekly synthesis on your memory files",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "What do you know about the billing module architecture?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Write documentation for the API endpoints",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Set up a new project repository with proper structure",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        },
+        {
+          "query": "Remember that Riley prefers dark mode in all applications",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": false
+        },
+        {
+          "query": "Send Riley an email about the meeting notes",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 1,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

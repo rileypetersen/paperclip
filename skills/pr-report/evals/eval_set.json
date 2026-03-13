@@ -1,0 +1,22 @@
+[
+  {"query": "Review PR #123 and produce a detailed report", "should_trigger": true},
+  {"query": "Write a code review report for the authentication refactor branch", "should_trigger": true},
+  {"query": "Compare the feature/billing branch against main and explain the changes", "should_trigger": true},
+  {"query": "Give me a merge recommendation for PR #456", "should_trigger": true},
+  {"query": "Analyze the diff in PR #78 and explain the design decisions", "should_trigger": true},
+  {"query": "Produce an HTML report reviewing the latest contribution to the API module", "should_trigger": true},
+  {"query": "Review this pull request tutorial-style for the maintainer", "should_trigger": true},
+  {"query": "Evaluate PR #200 — should we merge it?", "should_trigger": true},
+  {"query": "Deep dive into PR #55 and flag any concerns", "should_trigger": true},
+  {"query": "Generate a contribution analysis report for the database migration PR", "should_trigger": true},
+  {"query": "Write the changelog for the latest release", "should_trigger": false},
+  {"query": "Fix the failing test in the auth module", "should_trigger": false},
+  {"query": "Ship the v2.0 release", "should_trigger": false},
+  {"query": "Create a pull request for my current changes", "should_trigger": false},
+  {"query": "Merge the feature branch into main", "should_trigger": false},
+  {"query": "Post a comment on issue #42 about the code review findings", "should_trigger": false},
+  {"query": "Write documentation for the new API endpoints", "should_trigger": false},
+  {"query": "Run the test suite and report results", "should_trigger": false},
+  {"query": "Refactor the authentication middleware", "should_trigger": false},
+  {"query": "Review the server logs for errors after the deploy", "should_trigger": false}
+]

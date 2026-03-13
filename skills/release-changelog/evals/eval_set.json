@@ -1,0 +1,22 @@
+[
+  {"query": "Generate the changelog for the upcoming v2.1.0 release", "should_trigger": true},
+  {"query": "What changed since the last release? Write it up", "should_trigger": true},
+  {"query": "Draft the release notes for the latest version", "should_trigger": true},
+  {"query": "Write a version summary of everything merged since v2.0.0", "should_trigger": true},
+  {"query": "Create release documentation listing all changes", "should_trigger": true},
+  {"query": "Summarize the commits since the last stable tag for the changelog", "should_trigger": true},
+  {"query": "Produce a changelog with contributor credits and PR references", "should_trigger": true},
+  {"query": "Draft the changelog entry for the security patches we merged", "should_trigger": true},
+  {"query": "Write release notes covering the new billing features", "should_trigger": true},
+  {"query": "Generate the stable changelog at releases/v2.1.0.md", "should_trigger": true},
+  {"query": "Ship the v2.1.0 release to production", "should_trigger": false},
+  {"query": "Review PR #123 and write a report", "should_trigger": false},
+  {"query": "Summarize this PR for the maintainer", "should_trigger": false},
+  {"query": "Write documentation for the new API endpoints", "should_trigger": false},
+  {"query": "Update the README with the latest features", "should_trigger": false},
+  {"query": "What did I work on this week? Give me a summary", "should_trigger": false},
+  {"query": "Compare the feature branch against main", "should_trigger": false},
+  {"query": "Fix the version number in package.json", "should_trigger": false},
+  {"query": "Post an announcement about the new release", "should_trigger": false},
+  {"query": "Remember that changelogs should follow Keep a Changelog format", "should_trigger": false}
+]

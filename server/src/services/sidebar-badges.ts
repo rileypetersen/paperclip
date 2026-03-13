@@ -1,16 +1,17 @@
-import { and, desc, eq, inArray, not, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, not, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { agents, approvals, heartbeatRuns } from "@paperclipai/db";
+import { agents, approvals, heartbeatRuns, issues } from "@paperclipai/db";
 import type { SidebarBadges } from "@paperclipai/shared";
 
 const ACTIONABLE_APPROVAL_STATUSES = ["pending", "revision_requested"];
 const FAILED_HEARTBEAT_STATUSES = ["failed", "timed_out"];
+const ACTIONABLE_UNASSIGNED_STATUSES = ["backlog", "todo", "in_progress", "in_review"];
 
 export function sidebarBadgeService(db: Db) {
   return {
     get: async (
       companyId: string,
-      extra?: { joinRequests?: number; unreadTouchedIssues?: number },
+      extra?: { joinRequests?: number },
     ): Promise<SidebarBadges> => {
       const actionableApprovals = await db
         .select({ count: sql<number>`count(*)` })
@@ -43,9 +44,32 @@ export function sidebarBadgeService(db: Db) {
       ).length;
 
       const joinRequests = extra?.joinRequests ?? 0;
-      const unreadTouchedIssues = extra?.unreadTouchedIssues ?? 0;
+      const blockedIssues = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(issues)
+        .where(
+          and(
+            eq(issues.companyId, companyId),
+            eq(issues.status, "blocked"),
+            isNull(issues.hiddenAt),
+          ),
+        )
+        .then((rows) => Number(rows[0]?.count ?? 0));
+      const unassignedIssues = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(issues)
+        .where(
+          and(
+            eq(issues.companyId, companyId),
+            inArray(issues.status, ACTIONABLE_UNASSIGNED_STATUSES),
+            isNull(issues.assigneeAgentId),
+            isNull(issues.assigneeUserId),
+            isNull(issues.hiddenAt),
+          ),
+        )
+        .then((rows) => Number(rows[0]?.count ?? 0));
       return {
-        inbox: actionableApprovals + failedRuns + joinRequests + unreadTouchedIssues,
+        inbox: actionableApprovals + failedRuns + joinRequests + blockedIssues + unassignedIssues,
         approvals: actionableApprovals,
         failedRuns,
         joinRequests,

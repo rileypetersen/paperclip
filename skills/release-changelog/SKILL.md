@@ -1,8 +1,12 @@
 ---
 name: release-changelog
 description: >
-  Generate the stable Paperclip release changelog at releases/v{version}.md by
-  reading commits, changesets, and merged PR context since the last stable tag.
+  Use this skill to generate a changelog or release notes for Paperclip. Use
+  when someone asks "what changed since the last release", "write the changelog",
+  "draft release notes", "version summary", or wants to document changes between
+  versions. Reads commits, changesets, and merged PR context since the last
+  stable tag and produces releases/v{version}.md. NOT for shipping a release
+  (use release) or reviewing individual PRs (use pr-report).
 ---
 
 # Release Changelog Skill

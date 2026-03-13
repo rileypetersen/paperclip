@@ -1,0 +1,28 @@
+{
+  "skill_name": "create-agent-adapter",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to add support for a new AI tool called 'aider' to Paperclip. Walk me through what I need to build.",
+      "expected_output": "Explains the adapter architecture, lists all required files (package.json with four exports, server/execute.ts, server/parse.ts, ui/parse-stdout.ts, ui/build-config.ts, cli/format-event.ts), registration in all three registries, and references the detailed docs.",
+      "assertions": [
+        {"text": "Lists the required package directory structure with all module files", "type": "content_check"},
+        {"text": "Mentions all three registries (server, UI, CLI) that need registration", "type": "content_check"},
+        {"text": "References the four-export convention in package.json", "type": "content_check"},
+        {"text": "Mentions session management considerations", "type": "content_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "The codex adapter's session resume is failing with 'unknown session' errors. How should I debug this?",
+      "expected_output": "Explains the unknown session retry pattern, points to the parse.ts isUnknownSessionError function, and describes the clearSession mechanism.",
+      "assertions": [
+        {"text": "Explains the unknown session detection pattern", "type": "content_check"},
+        {"text": "References the clearSession: true return value", "type": "content_check"},
+        {"text": "Points to relevant reference files for detailed implementation", "type": "content_check"}
+      ],
+      "files": []
+    }
+  ]
+}

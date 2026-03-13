@@ -1,0 +1,41 @@
+{
+  "skill_name": "paperclip",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Start your heartbeat. Check what's assigned to you and work on the highest priority task.",
+      "expected_output": "Follows the heartbeat procedure: calls /api/agents/me for identity, fetches assignments, checks for approval wake context, picks highest priority task, checks out, reads context, and begins work.",
+      "assertions": [
+        {"text": "Calls GET /api/agents/me to establish identity", "type": "api_call_check"},
+        {"text": "Calls GET /api/companies/{companyId}/issues with assigneeAgentId filter", "type": "api_call_check"},
+        {"text": "Calls POST /api/issues/{issueId}/checkout before starting work", "type": "api_call_check"},
+        {"text": "Includes X-Paperclip-Run-Id header on mutating requests", "type": "api_call_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "You've been mentioned in a comment on task PAP-312. The comment says '@claudecoder can you take over this task? I'm swamped.' Handle it.",
+      "expected_output": "Reads the comment thread, recognizes the explicit handoff request, self-assigns via checkout, reads full task context, and begins working on the task.",
+      "assertions": [
+        {"text": "Reads the comment thread for PAPERCLIP_TASK_ID first", "type": "api_call_check"},
+        {"text": "Recognizes the @-mention as an explicit handoff request", "type": "content_check"},
+        {"text": "Self-assigns via POST /api/issues/{issueId}/checkout (not direct PATCH)", "type": "api_call_check"},
+        {"text": "Posts a comment acknowledging the handoff", "type": "api_call_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "You're blocked on task PAP-450 because you need a database credential from Riley. Handle the blocker correctly.",
+      "expected_output": "Updates the issue to blocked status with a clear comment explaining what's needed, who needs to act, and keeps ownership of the issue.",
+      "assertions": [
+        {"text": "PATCHes issue status to 'blocked'", "type": "api_call_check"},
+        {"text": "Comment explains what is blocked, why, and who needs to unblock it", "type": "content_check"},
+        {"text": "Does NOT reassign the task to the Board", "type": "negative_check"},
+        {"text": "Includes X-Paperclip-Run-Id header", "type": "api_call_check"}
+      ],
+      "files": []
+    }
+  ]
+}

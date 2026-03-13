@@ -116,6 +116,29 @@ Configure storage provider/settings:
 pnpm paperclipai configure --section storage
 ```
 
+## Board Email Notifications
+
+Board email notifications are instance-configured and off by default. V1 supports a generic `command` provider, so forks can wire their own delivery path without changing the core server.
+
+Relevant config/env:
+
+- `notifications.provider` or `PAPERCLIP_NOTIFICATIONS_PROVIDER`
+- `notifications.boardEmails` or `PAPERCLIP_BOARD_NOTIFICATION_EMAILS`
+- `notifications.command.path` or `PAPERCLIP_NOTIFICATIONS_COMMAND`
+- `notifications.command.args`
+- `notifications.stalledThresholdMinutes` or `PAPERCLIP_STALLED_WORK_THRESHOLD_MINUTES`
+- `notifications.stalledCooldownMinutes` or `PAPERCLIP_STALLED_WORK_COOLDOWN_MINUTES`
+
+Repo-local Gmail bridge for local installs:
+
+```sh
+PAPERCLIP_NOTIFICATIONS_PROVIDER=command
+PAPERCLIP_BOARD_NOTIFICATION_EMAILS=board@example.com
+PAPERCLIP_NOTIFICATIONS_COMMAND="$(pwd)/scripts/notifications/send-board-email-via-gws.mjs"
+PAPERCLIP_NOTIFICATION_FROM_EMAIL=paperclip@example.com
+PAPERCLIP_NOTIFICATION_FROM_NAME="Paperclip"
+```
+
 ## Default Agent Workspaces
 
 When a local agent run has no resolved project/session workspace, Paperclip falls back to an agent home workspace under the instance root:

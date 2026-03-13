@@ -14,6 +14,18 @@ export { dashboardService } from "./dashboard.js";
 export { sidebarBadgeService } from "./sidebar-badges.js";
 export { accessService } from "./access.js";
 export { companyPortabilityService } from "./company-portability.js";
+export {
+  createCommandNotificationProvider,
+  createDbNotificationRepository,
+  createNotificationService,
+  parseBoardNotificationMarker,
+  resolveNotificationBaseUrl,
+  buildBoardNotificationId,
+  type BoardNotificationService,
+  type BoardNotificationKind,
+  type IssueNotificationSnapshot,
+  type IssueCommentNotificationSnapshot,
+} from "./notifications.js";
 export { logActivity, type LogActivityInput } from "./activity-log.js";
 export { notifyHireApproved, type NotifyHireApprovedInput } from "./hire-hook.js";
 export { publishLiveEvent, subscribeCompanyLiveEvents } from "./live-events.js";

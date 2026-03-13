@@ -1,0 +1,40 @@
+{
+  "skill_name": "para-memory-files",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Remember that Riley's wife Sarah started a new job at Stripe last Monday as a product manager. She was previously at Square.",
+      "expected_output": "Creates or updates a people entity for Sarah under areas/people/sarah/ with an items.yaml entry containing the new job fact and a superseded entry for the Square job. Updates summary.md accordingly.",
+      "assertions": [
+        {"text": "Creates areas/people/sarah/ directory (or updates existing)", "type": "file_exists"},
+        {"text": "items.yaml contains a fact about Sarah starting at Stripe as product manager", "type": "content_check"},
+        {"text": "If Square fact existed, it is marked status: superseded with superseded_by pointing to the new fact", "type": "content_check"},
+        {"text": "summary.md is created or updated with the Stripe role prominently mentioned", "type": "content_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Run the weekly synthesis for my memory files. It's been a while since the last one.",
+      "expected_output": "Executes the weekly synthesis procedure: scans all entities, classifies facts by recency tier, rewrites summaries, archives inactive entities, updates index, and reindexes with qmd.",
+      "assertions": [
+        {"text": "Reads items.yaml files from entity directories", "type": "action_check"},
+        {"text": "Rewrites summary.md files based on hot/warm/cold classification", "type": "action_check"},
+        {"text": "Includes 'Last synthesized' date in updated summaries", "type": "content_check"},
+        {"text": "Runs qmd index $AGENT_HOME at the end", "type": "command_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "What do you know about the ACME contract? I think we discussed it a few weeks ago but I can't remember the details.",
+      "expected_output": "Uses qmd to search for ACME-related facts across memory files, retrieves relevant entities and daily notes, and presents findings with source references.",
+      "assertions": [
+        {"text": "Uses qmd query or qmd search to find ACME-related content", "type": "command_check"},
+        {"text": "Reports findings from entity files and/or daily notes", "type": "content_check"},
+        {"text": "Updates access_count and last_accessed on any facts retrieved", "type": "action_check"}
+      ],
+      "files": []
+    }
+  ]
+}

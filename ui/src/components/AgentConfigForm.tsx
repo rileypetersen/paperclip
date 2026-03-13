@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AGENT_ADAPTER_TYPES } from "@paperclipai/shared";
 import type {
   Agent,
+  AgentConfigFile,
   AdapterEnvironmentTestResult,
   CompanySecret,
   EnvBinding,
@@ -42,6 +43,7 @@ import { defaultCreateValues } from "./agent-config-defaults";
 import { getUIAdapter } from "../adapters";
 import { ClaudeLocalAdvancedFields } from "../adapters/claude-local/config-fields";
 import { MarkdownEditor } from "./MarkdownEditor";
+import { MarkdownBody } from "./MarkdownBody";
 import { ChoosePathButton } from "./PathInstructionsModal";
 import { OpenCodeLogoIcon } from "./OpenCodeLogoIcon";
 
@@ -56,6 +58,9 @@ import type { CreateConfigValues } from "@paperclipai/adapter-utils";
 
 type AgentConfigFormProps = {
   adapterModels?: AdapterModel[];
+  configFiles?: AgentConfigFile[];
+  configFilesLoading?: boolean;
+  configFilesError?: string | null;
   onDirtyChange?: (dirty: boolean) => void;
   onSaveActionChange?: (save: (() => void) | null) => void;
   onCancelActionChange?: (cancel: (() => void) | null) => void;
@@ -319,6 +324,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
   // Popover states
   const [modelOpen, setModelOpen] = useState(false);
   const [thinkingEffortOpen, setThinkingEffortOpen] = useState(false);
+  const [configFilesOpen, setConfigFilesOpen] = useState<Record<string, boolean>>({});
 
   // Create mode helpers
   const val = isCreate ? props.values : null;
@@ -383,6 +389,7 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
   const codexSearchEnabled = adapterType === "codex_local"
     ? (isCreate ? Boolean(val!.search) : eff("adapterConfig", "search", Boolean(config.search)))
     : false;
+  const configFiles = props.configFiles ?? [];
 
   return (
     <div className={cn("relative", cards && "space-y-6")}>
@@ -461,6 +468,58 @@ export function AgentConfigForm(props: AgentConfigFormProps) {
                   }}
                 />
               </Field>
+            )}
+            {isLocal && (
+              <div className="space-y-2 pt-1">
+                <div className="text-xs font-medium text-muted-foreground">Agent Config Files</div>
+                {props.configFilesLoading ? (
+                  <div className="rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                    Loading config files...
+                  </div>
+                ) : props.configFilesError ? (
+                  <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                    {props.configFilesError}
+                  </div>
+                ) : configFiles.length === 0 ? (
+                  <div className="rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                    No readable AGENTS, SOUL, HEARTBEAT, or TOOLS files found for this agent.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {configFiles.map((file) => {
+                      const open = configFilesOpen[file.id] ?? false;
+                      return (
+                        <div key={file.path} className="rounded-lg border border-border/70">
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-accent/30 transition-colors"
+                            onClick={() =>
+                              setConfigFilesOpen((prev) => ({ ...prev, [file.id]: !open }))
+                            }
+                          >
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium">{file.label}</div>
+                              <div className="truncate text-xs font-mono text-muted-foreground">
+                                {file.path}
+                              </div>
+                            </div>
+                            <ChevronDown
+                              className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+                            />
+                          </button>
+                          {open && (
+                            <div className="border-t border-border/70 px-3 py-3">
+                              <MarkdownBody className="text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                                {file.body}
+                              </MarkdownBody>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

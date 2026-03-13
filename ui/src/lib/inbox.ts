@@ -11,14 +11,22 @@ export const FAILED_RUN_STATUSES = new Set(["failed", "timed_out"]);
 export const ACTIONABLE_APPROVAL_STATUSES = new Set(["pending", "revision_requested"]);
 export const DISMISSED_KEY = "paperclip:inbox:dismissed";
 export const INBOX_LAST_TAB_KEY = "paperclip:inbox:last-tab";
-export type InboxTab = "recent" | "unread" | "all";
+export const ACTIONABLE_ISSUE_STATUSES = new Set([
+  "backlog",
+  "todo",
+  "in_progress",
+  "in_review",
+  "blocked",
+]);
+export type InboxTab = "needs-action" | "unread" | "all";
 
 export interface InboxBadgeData {
   inbox: number;
   approvals: number;
   failedRuns: number;
   joinRequests: number;
-  unreadTouchedIssues: number;
+  blockedIssues: number;
+  unassignedIssues: number;
   alerts: number;
 }
 
@@ -42,11 +50,11 @@ export function saveDismissedInboxItems(ids: Set<string>) {
 export function loadLastInboxTab(): InboxTab {
   try {
     const raw = localStorage.getItem(INBOX_LAST_TAB_KEY);
-    if (raw === "all" || raw === "unread" || raw === "recent") return raw;
-    if (raw === "new") return "recent";
-    return "recent";
+    if (raw === "all" || raw === "unread" || raw === "needs-action") return raw;
+    if (raw === "new" || raw === "recent") return "needs-action";
+    return "needs-action";
   } catch {
-    return "recent";
+    return "needs-action";
   }
 }
 
@@ -104,19 +112,35 @@ export function getUnreadTouchedIssues(issues: Issue[]): Issue[] {
   return issues.filter((issue) => issue.isUnreadForMe);
 }
 
+export function isBlockedIssue(issue: Issue): boolean {
+  return issue.status === "blocked";
+}
+
+export function isUnassignedIssue(issue: Issue): boolean {
+  return ACTIONABLE_ISSUE_STATUSES.has(issue.status) && !issue.assigneeAgentId && !issue.assigneeUserId;
+}
+
+export function getBlockedIssues(issues: Issue[]): Issue[] {
+  return issues.filter(isBlockedIssue);
+}
+
+export function getUnassignedIssues(issues: Issue[]): Issue[] {
+  return issues.filter(isUnassignedIssue);
+}
+
 export function computeInboxBadgeData({
   approvals,
   joinRequests,
   dashboard,
   heartbeatRuns,
-  unreadIssues,
+  issues,
   dismissed,
 }: {
   approvals: Approval[];
   joinRequests: JoinRequest[];
   dashboard: DashboardSummary | undefined;
   heartbeatRuns: HeartbeatRun[];
-  unreadIssues: Issue[];
+  issues: Issue[];
   dismissed: Set<string>;
 }): InboxBadgeData {
   const actionableApprovals = approvals.filter((approval) =>
@@ -125,7 +149,6 @@ export function computeInboxBadgeData({
   const failedRuns = getLatestFailedRunsByAgent(heartbeatRuns).filter(
     (run) => !dismissed.has(`run:${run.id}`),
   ).length;
-  const unreadTouchedIssues = unreadIssues.length;
   const agentErrorCount = dashboard?.agents.error ?? 0;
   const monthBudgetCents = dashboard?.costs.monthBudgetCents ?? 0;
   const monthUtilizationPercent = dashboard?.costs.monthUtilizationPercent ?? 0;
@@ -138,13 +161,18 @@ export function computeInboxBadgeData({
     monthUtilizationPercent >= 80 &&
     !dismissed.has("alert:budget");
   const alerts = Number(showAggregateAgentError) + Number(showBudgetAlert);
+  const blockedIssues = getBlockedIssues(issues).length;
+  const unassignedIssues = issues.filter(
+    (issue) => isUnassignedIssue(issue) && !isBlockedIssue(issue),
+  ).length;
 
   return {
-    inbox: actionableApprovals + joinRequests.length + failedRuns + unreadTouchedIssues + alerts,
+    inbox: actionableApprovals + joinRequests.length + failedRuns + blockedIssues + unassignedIssues + alerts,
     approvals: actionableApprovals,
     failedRuns,
     joinRequests: joinRequests.length,
-    unreadTouchedIssues,
+    blockedIssues,
+    unassignedIssues,
     alerts,
   };
 }

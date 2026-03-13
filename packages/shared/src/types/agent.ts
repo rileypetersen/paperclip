@@ -52,6 +52,19 @@ export interface AgentConfigRevision {
   createdAt: Date;
 }
 
+export interface AgentConfigFile {
+  id: string;
+  label: string;
+  path: string;
+  body: string;
+}
+
+export interface AgentConfigFilesResponse {
+  instructionsFilePath: string | null;
+  directoryPath: string | null;
+  files: AgentConfigFile[];
+}
+
 export type AdapterEnvironmentCheckLevel = "info" | "warn" | "error";
 export type AdapterEnvironmentTestStatus = "pass" | "warn" | "fail";
 

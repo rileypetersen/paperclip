@@ -1,9 +1,14 @@
 ---
 name: paperclip-create-agent
 description: >
-  Create new agents in Paperclip with governance-aware hiring. Use when you need
-  to inspect adapter configuration options, compare existing agent configs,
-  draft a new agent prompt/config, and submit a hire request.
+  Use this skill to hire, create, or onboard a new agent in Paperclip. Covers
+  the full hiring workflow: inspecting adapter options, comparing existing agent
+  configs, drafting system prompts, submitting hire requests through governance
+  approval, and post-approval setup. Use when someone says "hire an agent",
+  "add a new role", "staff up the team", "create an agent", "onboard a new
+  team member", or wants to expand the Paperclip agent roster. NOT for managing
+  existing agents' tasks (use paperclip) or building adapter code (use
+  create-agent-adapter).
 ---
 
 # Paperclip Create Agent Skill

@@ -193,6 +193,16 @@ export function buildWorktreeConfig(input: {
         keyFilePath: paths.secretsKeyFilePath,
       },
     },
+    notifications: {
+      provider: source?.notifications.provider ?? "disabled",
+      boardEmails: source?.notifications.boardEmails ?? [],
+      command: {
+        path: source?.notifications.command.path,
+        args: source?.notifications.command.args ?? [],
+      },
+      stalledThresholdMinutes: source?.notifications.stalledThresholdMinutes ?? 240,
+      stalledCooldownMinutes: source?.notifications.stalledCooldownMinutes ?? 1440,
+    },
   };
 }
 

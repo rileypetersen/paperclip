@@ -65,6 +65,13 @@ function createTempConfig(): string {
         keyFilePath: path.join(runtimeRoot, "secrets", "master.key"),
       },
     },
+    notifications: {
+      provider: "disabled",
+      boardEmails: [],
+      command: { args: [] },
+      stalledThresholdMinutes: 240,
+      stalledCooldownMinutes: 1440,
+    },
   };
 
   writeConfig(config, configPath);

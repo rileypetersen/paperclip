@@ -44,6 +44,60 @@ PAPERCLIP_PORT=3200 PAPERCLIP_DATA_DIR=./data/pc docker compose -f docker-compos
 
 If you change host port or use a non-local domain, set `PAPERCLIP_PUBLIC_URL` to the external URL you will use in browser/auth flows.
 
+## Public VPS Deploy (Caddy + HTTPS)
+
+For a public internet-facing deployment, use the dedicated compose stack instead of `docker-compose.quickstart.yml`.
+
+It includes:
+
+- PostgreSQL
+- Paperclip in `authenticated/public` mode
+- Caddy for automatic HTTPS
+
+1. Point your DNS record (for example `paperclip.civ.bid`) at your VPS.
+2. Copy the example env file and set strong secrets:
+
+```sh
+cp docker/.env.public.example docker/.env.public
+```
+
+Generate secure values:
+
+```sh
+openssl rand -hex 32
+openssl rand -hex 24
+```
+
+3. Start the stack:
+
+```sh
+docker compose --env-file docker/.env.public -f docker-compose.public.yml up -d --build
+```
+
+The example env file is prefilled for `paperclip.civ.bid`. Change `PAPERCLIP_DOMAIN` if you want a different hostname.
+
+Files:
+
+- `docker-compose.public.yml`
+- `docker/Caddyfile.public`
+- `docker/.env.public.example`
+
+Important:
+
+- `docker-compose.quickstart.yml` is hardcoded for `authenticated/private` and `http://localhost`, so it is not the right file for public hosting.
+- `PAPERCLIP_PUBLIC_URL` is derived from `PAPERCLIP_DOMAIN` in the public compose file.
+- `BETTER_AUTH_SECRET` is required in authenticated mode.
+- This stack uses PostgreSQL instead of embedded Postgres, which is a better fit for a VPS.
+
+After the stack is live, open `https://<your-domain>` in the browser. If this is a brand-new authenticated instance, use the bootstrap flow to create the first board admin:
+
+```sh
+docker compose --env-file docker/.env.public -f docker-compose.public.yml exec paperclip \
+  pnpm paperclipai auth bootstrap-ceo
+```
+
+If you are converting an existing `local_trusted` instance, Paperclip will also emit a one-time board-claim URL on startup so a signed-in user can take over instance admin ownership.
+
 ## Authenticated Compose (Single Public URL)
 
 For authenticated deployments, set one canonical public URL and let Paperclip derive auth/callback defaults:

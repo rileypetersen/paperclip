@@ -15,6 +15,7 @@ import { validate } from "../middleware/validate.js";
 import {
   accessService,
   agentService,
+  type BoardNotificationService,
   goalService,
   heartbeatService,
   issueApprovalService,
@@ -28,7 +29,7 @@ import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { shouldWakeAssigneeOnCheckout } from "./issues-checkout-wakeup.js";
 import { isAllowedContentType, MAX_ATTACHMENT_BYTES } from "../attachment-types.js";
 
-export function issueRoutes(db: Db, storage: StorageService) {
+export function issueRoutes(db: Db, storage: StorageService, notifications: BoardNotificationService) {
   const router = Router();
   const svc = issueService(db);
   const access = accessService(db);
@@ -432,6 +433,8 @@ export function issueRoutes(db: Db, storage: StorageService) {
       details: { title: issue.title, identifier: issue.identifier },
     });
 
+    await notifications.notifyIssueCreated(issue);
+
     if (issue.assigneeAgentId && issue.status !== "backlog") {
       void heartbeat
         .wakeup(issue.assigneeAgentId, {
@@ -540,6 +543,11 @@ export function issueRoutes(db: Db, storage: StorageService) {
       },
     });
 
+    await notifications.notifyIssueUpdated({
+      before: existing,
+      after: issue,
+    });
+
     let comment = null;
     if (commentBody) {
       comment = await svc.addComment(id, commentBody, {
@@ -565,6 +573,11 @@ export function issueRoutes(db: Db, storage: StorageService) {
         },
       });
 
+      const latestIssue = await svc.getById(id);
+      await notifications.notifyIssueComment({
+        issue: latestIssue ?? issue,
+        comment,
+      });
     }
 
     const assigneeChanged = assigneeWillChange;

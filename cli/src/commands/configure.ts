@@ -65,6 +65,15 @@ function defaultConfig(): PaperclipConfig {
     },
     storage: defaultStorageConfig(),
     secrets: defaultSecretsConfig(),
+    notifications: {
+      provider: "disabled",
+      boardEmails: [],
+      command: {
+        args: [],
+      },
+      stalledThresholdMinutes: 240,
+      stalledCooldownMinutes: 1440,
+    },
   };
 }
 

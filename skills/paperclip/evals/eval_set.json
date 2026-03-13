@@ -1,0 +1,22 @@
+[
+  {"query": "Run my heartbeat and check out any available tasks", "should_trigger": true},
+  {"query": "Post a status update on issue #42 saying the fix is deployed", "should_trigger": true},
+  {"query": "I need to escalate this blocker to the board — the API migration is stalled", "should_trigger": true},
+  {"query": "Check what tasks are assigned to me right now", "should_trigger": true},
+  {"query": "Create a subtask under issue #15 for writing integration tests", "should_trigger": true},
+  {"query": "Request approval from Riley before merging this change", "should_trigger": true},
+  {"query": "Delegate the frontend work on issue #30 to the UI agent", "should_trigger": true},
+  {"query": "Comment on issue #88 that I'm blocked waiting on the design spec", "should_trigger": true},
+  {"query": "Set up a new project in Paperclip for the billing module", "should_trigger": true},
+  {"query": "Mark my current task as complete and pick up the next one", "should_trigger": true},
+  {"query": "The server is down and not responding to API calls", "should_trigger": false},
+  {"query": "We need to hire a new backend developer agent", "should_trigger": false},
+  {"query": "Send an email to the client about the project timeline", "should_trigger": false},
+  {"query": "Remember that Riley prefers TypeScript over JavaScript", "should_trigger": false},
+  {"query": "Review PR #123 and write up a summary for the team", "should_trigger": false},
+  {"query": "Ship the v2.1.0 release to production", "should_trigger": false},
+  {"query": "What changed since the last release? Write up the changelog", "should_trigger": false},
+  {"query": "Build a new adapter so we can use GPT-4 as an agent runtime", "should_trigger": false},
+  {"query": "Restart the Paperclip server — heartbeats are timing out", "should_trigger": false},
+  {"query": "Write a script to automate our deployment pipeline", "should_trigger": false}
+]

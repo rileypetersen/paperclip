@@ -19,6 +19,8 @@ import { PageSkeleton } from "../components/PageSkeleton";
 import { ApprovalCard } from "../components/ApprovalCard";
 import { StatusBadge } from "../components/StatusBadge";
 import { timeAgo } from "../lib/timeAgo";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs } from "@/components/ui/tabs";
@@ -42,8 +44,13 @@ import { PageTabBar } from "../components/PageTabBar";
 import type { HeartbeatRun, Issue, JoinRequest } from "@paperclipai/shared";
 import {
   ACTIONABLE_APPROVAL_STATUSES,
+  getBlockedIssues,
   getLatestFailedRunsByAgent,
   getRecentTouchedIssues,
+  getUnassignedIssues,
+  isBlockedIssue,
+  isUnassignedIssue,
+  normalizeTimestamp,
   type InboxTab,
   saveLastInboxTab,
 } from "../lib/inbox";
@@ -51,24 +58,31 @@ import { useDismissedInboxItems } from "../hooks/useInboxBadge";
 
 type InboxCategoryFilter =
   | "everything"
-  | "issues_i_touched"
-  | "join_requests"
-  | "approvals"
-  | "failed_runs"
-  | "alerts";
+  | "approvals_requests"
+  | "failures_alerts"
+  | "activity_issues"
+  | "blocked_issues"
+  | "unassigned_issues";
 type InboxApprovalFilter = "all" | "actionable" | "resolved";
 type SectionKey =
-  | "issues_i_touched"
-  | "join_requests"
-  | "approvals"
-  | "failed_runs"
-  | "alerts";
+  | "activity_issues"
+  | "approvals_requests"
+  | "failures_alerts"
+  | "blocked_issues"
+  | "unassigned_issues";
 
 const RUN_SOURCE_LABELS: Record<string, string> = {
   timer: "Scheduled",
   assignment: "Assignment",
   on_demand: "Manual",
   automation: "Automation",
+};
+const ACTIONABLE_INBOX_ISSUE_STATUSES = "backlog,todo,in_progress,in_review,blocked";
+const PRIORITY_ORDER: Record<Issue["priority"], number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
 };
 
 function firstNonEmptyLine(value: string | null | undefined): string | null {
@@ -92,6 +106,145 @@ function readIssueIdFromRun(run: HeartbeatRun): string | null {
   if (typeof taskId === "string" && taskId.length > 0) return taskId;
 
   return null;
+}
+
+function compareIssuesByPriorityThenOldest(a: Issue, b: Issue): number {
+  const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+  if (priorityDiff !== 0) return priorityDiff;
+  return normalizeTimestamp(a.updatedAt) - normalizeTimestamp(b.updatedAt);
+}
+
+function compareBlockedIssues(a: Issue, b: Issue): number {
+  const awaitingDiff = Number(Boolean(b.isUnreadForMe)) - Number(Boolean(a.isUnreadForMe));
+  if (awaitingDiff !== 0) return awaitingDiff;
+  return compareIssuesByPriorityThenOldest(a, b);
+}
+
+function mergeTouchedIssueContext(issues: Issue[], touchedIssues: Issue[]): Issue[] {
+  const touchedById = new Map(touchedIssues.map((issue) => [issue.id, issue]));
+  return issues.map((issue) => {
+    const touched = touchedById.get(issue.id);
+    if (!touched) return issue;
+    return {
+      ...issue,
+      myLastTouchAt: touched.myLastTouchAt ?? issue.myLastTouchAt,
+      lastExternalCommentAt: touched.lastExternalCommentAt ?? issue.lastExternalCommentAt,
+      isUnreadForMe: touched.isUnreadForMe ?? issue.isUnreadForMe,
+    };
+  });
+}
+
+function issueAssigneeSummary(issue: Issue, agentName: (id: string | null) => string | null): string {
+  if (issue.assigneeAgentId) return `Assigned to ${agentName(issue.assigneeAgentId) ?? "agent"}`;
+  if (issue.assigneeUserId) return "Assigned to board";
+  return "No assignee";
+}
+
+function IssueAttentionRow({
+  issue,
+  issueLinkState,
+  agentName,
+  markRead,
+  isFading,
+}: {
+  issue: Issue;
+  issueLinkState: unknown;
+  agentName: (id: string | null) => string | null;
+  markRead: (id: string) => void;
+  isFading: boolean;
+}) {
+  const awaitingResponse = Boolean(issue.isUnreadForMe) && !isFading;
+  const unassigned = isUnassignedIssue(issue);
+  const lastCommentSummary = issue.lastExternalCommentAt
+    ? `new comment ${timeAgo(issue.lastExternalCommentAt)}`
+    : null;
+
+  return (
+    <Link
+      key={issue.id}
+      to={`/issues/${issue.identifier ?? issue.id}`}
+      state={issueLinkState}
+      className={cn(
+        "flex min-w-0 cursor-pointer items-start gap-3 px-3 py-3 no-underline text-inherit transition-colors hover:bg-accent/50 sm:px-4",
+        awaitingResponse && "bg-accent/20",
+      )}
+    >
+      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center pt-0.5">
+        {(awaitingResponse || isFading) ? (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              markRead(issue.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                markRead(issue.id);
+              }
+            }}
+            className="inline-flex h-4 w-4 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-blue-500/20"
+            aria-label="Mark as read"
+          >
+            <span
+              className={cn(
+                "block h-2 w-2 rounded-full bg-blue-600 transition-opacity duration-300 dark:bg-blue-400",
+                isFading ? "opacity-0" : "opacity-100",
+              )}
+            />
+          </span>
+        ) : (
+          <span className="inline-flex h-4 w-4" aria-hidden="true" />
+        )}
+      </span>
+
+      <span className="inline-flex shrink-0 pt-0.5"><PriorityIcon priority={issue.priority} /></span>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="shrink-0 text-xs font-mono text-muted-foreground">
+            {issue.identifier ?? issue.id.slice(0, 8)}
+          </span>
+          <span className="min-w-0 flex-1 text-sm font-medium">
+            <span className="line-clamp-2 min-w-0 sm:line-clamp-1 sm:block sm:truncate">
+              {issue.title}
+            </span>
+          </span>
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {isBlockedIssue(issue) && (
+            <Badge variant="destructive" className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]">
+              Blocked
+            </Badge>
+          )}
+          {awaitingResponse && (
+            <Badge variant="secondary" className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]">
+              Awaiting response
+            </Badge>
+          )}
+          {unassigned && (
+            <Badge variant="outline" className="rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]">
+              Unassigned
+            </Badge>
+          )}
+        </div>
+
+        <div className="mt-2 text-xs text-muted-foreground">
+          {[issueAssigneeSummary(issue, agentName), lastCommentSummary ?? `updated ${timeAgo(issue.updatedAt)}`]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      </div>
+
+      <span className="hidden shrink-0 self-center text-xs text-muted-foreground sm:block">
+        updated {timeAgo(issue.updatedAt)}
+      </span>
+    </Link>
+  );
 }
 
 function FailedRunCard({
@@ -243,9 +396,9 @@ export function Inbox() {
   const [allApprovalFilter, setAllApprovalFilter] = useState<InboxApprovalFilter>("all");
   const { dismissed, dismiss } = useDismissedInboxItems();
 
-  const pathSegment = location.pathname.split("/").pop() ?? "recent";
+  const pathSegment = location.pathname.split("/").pop() ?? "needs-action";
   const tab: InboxTab =
-    pathSegment === "all" || pathSegment === "unread" ? pathSegment : "recent";
+    pathSegment === "all" || pathSegment === "unread" ? pathSegment : "needs-action";
   const issueLinkState = useMemo(
     () =>
       createIssueDetailLocationState(
@@ -305,8 +458,11 @@ export function Inbox() {
   });
 
   const { data: issues, isLoading: isIssuesLoading } = useQuery({
-    queryKey: queryKeys.issues.list(selectedCompanyId!),
-    queryFn: () => issuesApi.list(selectedCompanyId!),
+    queryKey: queryKeys.issues.listInboxActionable(selectedCompanyId!),
+    queryFn: () =>
+      issuesApi.list(selectedCompanyId!, {
+        status: ACTIONABLE_INBOX_ISSUE_STATUSES,
+      }),
     enabled: !!selectedCompanyId,
   });
   const {
@@ -333,6 +489,21 @@ export function Inbox() {
     () => touchedIssues.filter((issue) => issue.isUnreadForMe),
     [touchedIssues],
   );
+  const actionableIssues = useMemo(
+    () => mergeTouchedIssueContext(issues ?? [], touchedIssuesRaw),
+    [issues, touchedIssuesRaw],
+  );
+  const blockedIssues = useMemo(
+    () => getBlockedIssues(actionableIssues).sort(compareBlockedIssues),
+    [actionableIssues],
+  );
+  const unassignedIssues = useMemo(
+    () =>
+      getUnassignedIssues(actionableIssues)
+        .filter((issue) => !isBlockedIssue(issue))
+        .sort(compareIssuesByPriorityThenOldest),
+    [actionableIssues],
+  );
 
   const agentById = useMemo(() => {
     const map = new Map<string, string>();
@@ -342,9 +513,9 @@ export function Inbox() {
 
   const issueById = useMemo(() => {
     const map = new Map<string, Issue>();
-    for (const issue of issues ?? []) map.set(issue.id, issue);
+    for (const issue of actionableIssues) map.set(issue.id, issue);
     return map;
-  }, [issues]);
+  }, [actionableIssues]);
 
   const failedRuns = useMemo(
     () => getLatestFailedRunsByAgent(heartbeatRuns ?? []).filter((r) => !dismissed.has(`run:${r.id}`)),
@@ -494,40 +665,54 @@ export function Inbox() {
     dashboard.costs.monthUtilizationPercent >= 80 &&
     !dismissed.has("alert:budget");
   const hasAlerts = showAggregateAgentError || showBudgetAlert;
+  const hasBlockedIssues = blockedIssues.length > 0;
+  const hasUnassignedIssues = unassignedIssues.length > 0;
   const hasJoinRequests = joinRequests.length > 0;
-  const hasTouchedIssues = touchedIssues.length > 0;
-
-  const showJoinRequestsCategory =
-    allCategoryFilter === "everything" || allCategoryFilter === "join_requests";
-  const showTouchedCategory =
-    allCategoryFilter === "everything" || allCategoryFilter === "issues_i_touched";
-  const showApprovalsCategory = allCategoryFilter === "everything" || allCategoryFilter === "approvals";
-  const showFailedRunsCategory =
-    allCategoryFilter === "everything" || allCategoryFilter === "failed_runs";
-  const showAlertsCategory = allCategoryFilter === "everything" || allCategoryFilter === "alerts";
+  const showApprovalsRequestsCategory =
+    allCategoryFilter === "everything" || allCategoryFilter === "approvals_requests";
+  const showFailuresAlertsCategory =
+    allCategoryFilter === "everything" || allCategoryFilter === "failures_alerts";
+  const showActivityCategory =
+    allCategoryFilter === "everything" || allCategoryFilter === "activity_issues";
+  const showBlockedCategory =
+    allCategoryFilter === "everything" || allCategoryFilter === "blocked_issues";
+  const showUnassignedCategory =
+    allCategoryFilter === "everything" || allCategoryFilter === "unassigned_issues";
 
   const approvalsToRender = tab === "all" ? filteredAllApprovals : actionableApprovals;
-  const showTouchedSection =
-    tab === "all"
-      ? showTouchedCategory && hasTouchedIssues
-      : tab === "unread"
-        ? unreadTouchedIssues.length > 0
-        : hasTouchedIssues;
-  const showJoinRequestsSection =
-    tab === "all" ? showJoinRequestsCategory && hasJoinRequests : tab === "unread" && hasJoinRequests;
-  const showApprovalsSection = tab === "all"
-    ? showApprovalsCategory && filteredAllApprovals.length > 0
-    : actionableApprovals.length > 0;
-  const showFailedRunsSection =
-    tab === "all" ? showFailedRunsCategory && hasRunFailures : tab === "unread" && hasRunFailures;
-  const showAlertsSection = tab === "all" ? showAlertsCategory && hasAlerts : tab === "unread" && hasAlerts;
+  const showApprovalsRequestsSection = tab === "needs-action"
+    ? actionableApprovals.length > 0 || hasJoinRequests
+    : tab === "unread"
+      ? actionableApprovals.length > 0 || hasJoinRequests
+      : showApprovalsRequestsCategory && (filteredAllApprovals.length > 0 || hasJoinRequests);
+  const showFailuresAlertsSection = tab === "needs-action"
+    ? hasRunFailures || hasAlerts
+    : tab === "unread"
+      ? hasRunFailures || hasAlerts
+      : showFailuresAlertsCategory && (hasRunFailures || hasAlerts);
+  const showBlockedSection = tab === "needs-action"
+    ? hasBlockedIssues
+    : tab === "all"
+      ? showBlockedCategory && hasBlockedIssues
+      : false;
+  const showUnassignedSection = tab === "needs-action"
+    ? hasUnassignedIssues
+    : tab === "all"
+      ? showUnassignedCategory && hasUnassignedIssues
+      : false;
+  const showActivitySection = tab === "all"
+    ? showActivityCategory && touchedIssues.length > 0
+    : tab === "unread"
+      ? unreadTouchedIssues.length > 0
+      : false;
+  const activityIssues = tab === "all" ? touchedIssues : unreadTouchedIssues;
 
   const visibleSections = [
-    showFailedRunsSection ? "failed_runs" : null,
-    showAlertsSection ? "alerts" : null,
-    showApprovalsSection ? "approvals" : null,
-    showJoinRequestsSection ? "join_requests" : null,
-    showTouchedSection ? "issues_i_touched" : null,
+    showApprovalsRequestsSection ? "approvals_requests" : null,
+    showFailuresAlertsSection ? "failures_alerts" : null,
+    showBlockedSection ? "blocked_issues" : null,
+    showUnassignedSection ? "unassigned_issues" : null,
+    showActivitySection ? "activity_issues" : null,
   ].filter((key): key is SectionKey => key !== null);
 
   const allLoaded =
@@ -542,7 +727,7 @@ export function Inbox() {
   const unreadIssueIds = unreadTouchedIssues
     .filter((issue) => !fadingOutIssues.has(issue.id))
     .map((issue) => issue.id);
-  const canMarkAllRead = unreadIssueIds.length > 0;
+  const canMarkAllRead = tab === "unread" && unreadIssueIds.length > 0;
 
   return (
     <div className="space-y-6">
@@ -551,8 +736,8 @@ export function Inbox() {
           <PageTabBar
             items={[
               {
-                value: "recent",
-                label: "Recent",
+                value: "needs-action",
+                label: "Needs Action",
               },
               { value: "unread", label: "Unread" },
               { value: "all", label: "All" },
@@ -585,15 +770,15 @@ export function Inbox() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="everything">All categories</SelectItem>
-                <SelectItem value="issues_i_touched">My recent issues</SelectItem>
-                <SelectItem value="join_requests">Join requests</SelectItem>
-                <SelectItem value="approvals">Approvals</SelectItem>
-                <SelectItem value="failed_runs">Failed runs</SelectItem>
-                <SelectItem value="alerts">Alerts</SelectItem>
+                <SelectItem value="approvals_requests">Approvals &amp; requests</SelectItem>
+                <SelectItem value="failures_alerts">Failures &amp; alerts</SelectItem>
+                <SelectItem value="activity_issues">Issue activity</SelectItem>
+                <SelectItem value="blocked_issues">Blocked issues</SelectItem>
+                <SelectItem value="unassigned_issues">Unassigned issues</SelectItem>
               </SelectContent>
             </Select>
 
-            {showApprovalsCategory && (
+            {showApprovalsRequestsCategory && (
               <Select
                 value={allApprovalFilter}
                 onValueChange={(value) => setAllApprovalFilter(value as InboxApprovalFilter)}
@@ -626,19 +811,19 @@ export function Inbox() {
           message={
             tab === "unread"
               ? "No new inbox items."
-              : tab === "recent"
-                ? "No recent inbox items."
+              : tab === "needs-action"
+                ? "No items need action."
                 : "No inbox items match these filters."
           }
         />
       )}
 
-      {showApprovalsSection && (
+      {showApprovalsRequestsSection && (
         <>
-          {showSeparatorBefore("approvals") && <Separator />}
+          {showSeparatorBefore("approvals_requests") && <Separator />}
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              {tab === "unread" ? "Approvals Needing Action" : "Approvals"}
+              Approvals &amp; Requests
             </h3>
             <div className="grid gap-3">
               {approvalsToRender.map((approval) => (
@@ -656,19 +841,6 @@ export function Inbox() {
                   isPending={approveMutation.isPending || rejectMutation.isPending}
                 />
               ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {showJoinRequestsSection && (
-        <>
-          {showSeparatorBefore("join_requests") && <Separator />}
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Join Requests
-            </h3>
-            <div className="grid gap-3">
               {joinRequests.map((joinRequest) => (
                 <div key={joinRequest.id} className="rounded-xl border border-border bg-card p-4">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -715,12 +887,12 @@ export function Inbox() {
         </>
       )}
 
-      {showFailedRunsSection && (
+      {showFailuresAlertsSection && (
         <>
-          {showSeparatorBefore("failed_runs") && <Separator />}
+          {showSeparatorBefore("failures_alerts") && <Separator />}
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Failed Runs
+              Failures &amp; Alerts
             </h3>
             <div className="grid gap-3">
               {failedRuns.map((run) => (
@@ -734,74 +906,115 @@ export function Inbox() {
                 />
               ))}
             </div>
+
+            {hasAlerts && (
+              <div className="mt-3 divide-y divide-border border border-border">
+                {showAggregateAgentError && (
+                  <div className="group/alert relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50">
+                    <Link
+                      to="/agents"
+                      className="flex flex-1 cursor-pointer items-center gap-3 no-underline text-inherit"
+                    >
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
+                      <span className="text-sm">
+                        <span className="font-medium">{dashboard!.agents.error}</span>{" "}
+                        {dashboard!.agents.error === 1 ? "agent has" : "agents have"} errors
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => dismiss("alert:agent-errors")}
+                      className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/alert:opacity-100"
+                      aria-label="Dismiss"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {showBudgetAlert && (
+                  <div className="group/alert relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50">
+                    <Link
+                      to="/costs"
+                      className="flex flex-1 cursor-pointer items-center gap-3 no-underline text-inherit"
+                    >
+                      <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-400" />
+                      <span className="text-sm">
+                        Budget at{" "}
+                        <span className="font-medium">{dashboard!.costs.monthUtilizationPercent}%</span>{" "}
+                        utilization this month
+                      </span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => dismiss("alert:budget")}
+                      className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/alert:opacity-100"
+                      aria-label="Dismiss"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
 
-      {showAlertsSection && (
+      {showBlockedSection && (
         <>
-          {showSeparatorBefore("alerts") && <Separator />}
+          {showSeparatorBefore("blocked_issues") && <Separator />}
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Alerts
+              Blocked Issues
             </h3>
             <div className="divide-y divide-border border border-border">
-              {showAggregateAgentError && (
-                <div className="group/alert relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50">
-                  <Link
-                    to="/agents"
-                    className="flex flex-1 cursor-pointer items-center gap-3 no-underline text-inherit"
-                  >
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
-                    <span className="text-sm">
-                      <span className="font-medium">{dashboard!.agents.error}</span>{" "}
-                      {dashboard!.agents.error === 1 ? "agent has" : "agents have"} errors
-                    </span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => dismiss("alert:agent-errors")}
-                    className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/alert:opacity-100"
-                    aria-label="Dismiss"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-              {showBudgetAlert && (
-                <div className="group/alert relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50">
-                  <Link
-                    to="/costs"
-                    className="flex flex-1 cursor-pointer items-center gap-3 no-underline text-inherit"
-                  >
-                    <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-400" />
-                    <span className="text-sm">
-                      Budget at{" "}
-                      <span className="font-medium">{dashboard!.costs.monthUtilizationPercent}%</span>{" "}
-                      utilization this month
-                    </span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => dismiss("alert:budget")}
-                    className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover/alert:opacity-100"
-                    aria-label="Dismiss"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
+              {blockedIssues.map((issue) => (
+                <IssueAttentionRow
+                  key={issue.id}
+                  issue={issue}
+                  issueLinkState={issueLinkState}
+                  agentName={agentName}
+                  markRead={(id) => markReadMutation.mutate(id)}
+                  isFading={fadingOutIssues.has(issue.id)}
+                />
+              ))}
             </div>
           </div>
         </>
       )}
 
-      {showTouchedSection && (
+      {showUnassignedSection && (
         <>
-          {showSeparatorBefore("issues_i_touched") && <Separator />}
+          {showSeparatorBefore("unassigned_issues") && <Separator />}
           <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Unassigned Issues
+            </h3>
             <div className="divide-y divide-border border border-border">
-              {(tab === "unread" ? unreadTouchedIssues : touchedIssues).map((issue) => {
+              {unassignedIssues.map((issue) => (
+                <IssueAttentionRow
+                  key={issue.id}
+                  issue={issue}
+                  issueLinkState={issueLinkState}
+                  agentName={agentName}
+                  markRead={(id) => markReadMutation.mutate(id)}
+                  isFading={fadingOutIssues.has(issue.id)}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {showActivitySection && (
+        <>
+          {showSeparatorBefore("activity_issues") && <Separator />}
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              {tab === "all" ? "Issue Activity" : "Unread Activity"}
+            </h3>
+            <div className="divide-y divide-border border border-border">
+              {activityIssues.map((issue) => {
                 const isUnread = issue.isUnreadForMe && !fadingOutIssues.has(issue.id);
                 const isFading = fadingOutIssues.has(issue.id);
                 return (

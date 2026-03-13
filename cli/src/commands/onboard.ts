@@ -419,6 +419,15 @@ export async function onboard(opts: OnboardOptions): Promise<void> {
     auth,
     storage,
     secrets,
+    notifications: {
+      provider: "disabled",
+      boardEmails: [],
+      command: {
+        args: [],
+      },
+      stalledThresholdMinutes: 240,
+      stalledCooldownMinutes: 1440,
+    },
   };
 
   const keyResult = ensureLocalSecretsKeyFile(config, configPath);

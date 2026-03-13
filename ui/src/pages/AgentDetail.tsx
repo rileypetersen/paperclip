@@ -54,6 +54,7 @@ import {
   ChevronRight,
   ChevronDown,
   ArrowLeft,
+  Settings,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AgentIcon, AgentIconPicker } from "../components/AgentIconPicker";
@@ -466,6 +467,15 @@ export function AgentDetail() {
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => navigate(`/agents/${canonicalAgentRef}/configuration`)}
+            aria-label="Open configuration"
+            title="Configuration"
+          >
+            <Settings className="h-3.5 w-3.5" />
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -1055,6 +1065,15 @@ function ConfigurationTab({
     enabled: Boolean(companyId),
   });
 
+  const {
+    data: configFiles,
+    error: configFilesError,
+    isLoading: configFilesLoading,
+  } = useQuery({
+    queryKey: queryKeys.agents.configFiles(agent.id),
+    queryFn: () => agentsApi.getConfigFiles(agent.id, companyId),
+  });
+
   const updateAgent = useMutation({
     mutationFn: (data: Record<string, unknown>) => agentsApi.update(agent.id, data, companyId),
     onMutate: () => {
@@ -1091,6 +1110,9 @@ function ConfigurationTab({
         onSave={(patch) => updateAgent.mutate(patch)}
         isSaving={isConfigSaving}
         adapterModels={adapterModels}
+        configFiles={configFiles?.files ?? []}
+        configFilesLoading={configFilesLoading}
+        configFilesError={configFilesError instanceof Error ? configFilesError.message : null}
         onDirtyChange={onDirtyChange}
         onSaveActionChange={onSaveActionChange}
         onCancelActionChange={onCancelActionChange}

@@ -1,0 +1,27 @@
+{
+  "skill_name": "paperclip-restart",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Paperclip isn't responding. The health endpoint returns nothing. Can you restart it?",
+      "expected_output": "Runs the restart script, waits for health check, and verifies the server is back up.",
+      "assertions": [
+        {"text": "Runs /Users/rileypetersen/paperclip/scripts/restart-server.sh", "type": "command_check"},
+        {"text": "Verifies server health after restart via curl to /api/health", "type": "command_check"},
+        {"text": "Reports success or failure with next steps", "type": "content_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I just ran a database migration. Do I need to restart the server?",
+      "expected_output": "Confirms that database migrations require a server restart, runs the restart script, and verifies the server comes back healthy.",
+      "assertions": [
+        {"text": "Recognizes that DB migrations require a restart", "type": "content_check"},
+        {"text": "Runs the restart script", "type": "command_check"},
+        {"text": "Checks server health after restart", "type": "command_check"}
+      ],
+      "files": []
+    }
+  ]
+}

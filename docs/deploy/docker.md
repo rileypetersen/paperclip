@@ -46,6 +46,43 @@ All data is persisted under the bind mount (`./data/docker-paperclip`):
 - Local secrets key
 - Agent workspace data
 
+## Public VPS Deploy (Caddy + HTTPS)
+
+Use the public stack when you want a real internet-facing hostname such as `paperclip.civ.bid`.
+
+It wires together:
+
+- PostgreSQL
+- Paperclip in `authenticated/public` mode
+- Caddy for automatic HTTPS
+
+1. Point your DNS record at the VPS.
+2. Copy the env template:
+
+```sh
+cp docker/.env.public.example docker/.env.public
+```
+
+3. Fill in `BETTER_AUTH_SECRET` and `POSTGRES_PASSWORD`.
+4. Start the stack:
+
+```sh
+docker compose --env-file docker/.env.public -f docker-compose.public.yml up -d --build
+```
+
+The new files are:
+
+- `docker-compose.public.yml`
+- `docker/Caddyfile.public`
+- `docker/.env.public.example`
+
+To mint the first admin bootstrap invite on a new authenticated instance:
+
+```sh
+docker compose --env-file docker/.env.public -f docker-compose.public.yml exec paperclip \
+  pnpm paperclipai auth bootstrap-ceo
+```
+
 ## Claude and Codex Adapters in Docker
 
 The Docker image pre-installs:

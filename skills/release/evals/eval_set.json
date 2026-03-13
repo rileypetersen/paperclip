@@ -1,0 +1,22 @@
+[
+  {"query": "Ship the v2.1.0 release to production", "should_trigger": true},
+  {"query": "Let's ship it — do a patch release", "should_trigger": true},
+  {"query": "Publish the next minor version", "should_trigger": true},
+  {"query": "Do a version bump and release", "should_trigger": true},
+  {"query": "Run a canary build before we go to production", "should_trigger": true},
+  {"query": "Release v3.0.0 — major version with breaking changes", "should_trigger": true},
+  {"query": "Coordinate the release across npm, GitHub, and the website", "should_trigger": true},
+  {"query": "We're ready to publish — do the full release process", "should_trigger": true},
+  {"query": "Do a release for the hotfix we just merged", "should_trigger": true},
+  {"query": "Let's cut a new release with the latest changes", "should_trigger": true},
+  {"query": "Write the changelog for the upcoming release", "should_trigger": false},
+  {"query": "What changed since the last release?", "should_trigger": false},
+  {"query": "Review the PR that prepares the release branch", "should_trigger": false},
+  {"query": "Deploy the latest build to staging", "should_trigger": false},
+  {"query": "Update the version number in package.json", "should_trigger": false},
+  {"query": "Send an email announcing the new release", "should_trigger": false},
+  {"query": "Fix the bug that's blocking the release", "should_trigger": false},
+  {"query": "Check the CI pipeline status for the release branch", "should_trigger": false},
+  {"query": "Restart the server after the release", "should_trigger": false},
+  {"query": "Create a Git tag for the current commit", "should_trigger": false}
+]

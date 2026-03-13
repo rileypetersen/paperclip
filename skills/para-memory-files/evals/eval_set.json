@@ -1,0 +1,22 @@
+[
+  {"query": "Remember that Riley prefers dark mode in all applications", "should_trigger": true},
+  {"query": "What do you know about the billing module architecture?", "should_trigger": true},
+  {"query": "Update your memory — the deployment process changed last week", "should_trigger": true},
+  {"query": "Save this fact: our SLA target is 99.9% uptime", "should_trigger": true},
+  {"query": "Run the weekly synthesis on your memory files", "should_trigger": true},
+  {"query": "Store this for future reference: the database credentials rotate every 90 days", "should_trigger": true},
+  {"query": "What have you learned about how this team handles code reviews?", "should_trigger": true},
+  {"query": "Create a new knowledge entity for the authentication service", "should_trigger": true},
+  {"query": "Organize your notes about the recent infrastructure migration", "should_trigger": true},
+  {"query": "Search your memory for anything related to the payment processing system", "should_trigger": true},
+  {"query": "Write a summary of what changed in the last release", "should_trigger": false},
+  {"query": "Send Riley an email about the meeting notes", "should_trigger": false},
+  {"query": "Review PR #45 and explain the changes", "should_trigger": false},
+  {"query": "Create a new agent for the data team", "should_trigger": false},
+  {"query": "Check my Paperclip tasks and run a heartbeat", "should_trigger": false},
+  {"query": "Add a comment to issue #12 with the investigation results", "should_trigger": false},
+  {"query": "Write documentation for the API endpoints", "should_trigger": false},
+  {"query": "Fix the bug in the user registration flow", "should_trigger": false},
+  {"query": "Ship the v3.0 release", "should_trigger": false},
+  {"query": "Set up a new project repository with proper structure", "should_trigger": false}
+]

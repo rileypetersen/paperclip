@@ -91,6 +91,13 @@ function buildSourceConfig(): PaperclipConfig {
         keyFilePath: "/tmp/main/secrets/master.key",
       },
     },
+    notifications: {
+      provider: "disabled",
+      boardEmails: [],
+      command: { args: [] },
+      stalledThresholdMinutes: 240,
+      stalledCooldownMinutes: 1440,
+    },
   };
 }
 

@@ -1,0 +1,29 @@
+{
+  "skill_name": "release",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Let's ship a patch release. Everything on master looks good.",
+      "expected_output": "Follows the full release workflow: runs release-start.sh, drafts changelog via release-changelog skill, verifies the SHA, publishes a canary, runs smoke tests, then publishes stable.",
+      "assertions": [
+        {"text": "Runs scripts/release-start.sh with 'patch' argument", "type": "command_check"},
+        {"text": "Invokes the release-changelog skill to draft the changelog", "type": "action_check"},
+        {"text": "Runs verification gate (typecheck, test, build)", "type": "command_check"},
+        {"text": "Publishes canary before stable (scripts/release.sh --canary)", "type": "command_check"},
+        {"text": "Runs docker smoke test on canary before publishing stable", "type": "command_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "The canary we published has a bug. What do we do?",
+      "expected_output": "Explains that we should NOT ship stable, fix the issue, publish another canary with a higher ordinal, re-run smoke tests, and only then proceed to stable.",
+      "assertions": [
+        {"text": "Advises against publishing stable with the known bug", "type": "content_check"},
+        {"text": "Recommends publishing another canary (higher ordinal)", "type": "content_check"},
+        {"text": "Recommends re-running smoke tests", "type": "content_check"}
+      ],
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+[
+  {"query": "Send an email to riley@civ.bid about the project status update", "should_trigger": true},
+  {"query": "Check my inbox for any new messages", "should_trigger": true},
+  {"query": "Reply to the email from the client about the contract renewal", "should_trigger": true},
+  {"query": "Forward the deployment notification to the ops team", "should_trigger": true},
+  {"query": "Send a message to the board about the quarterly results", "should_trigger": true},
+  {"query": "Read the latest emails and triage what needs attention", "should_trigger": true},
+  {"query": "Email the vendor about the license renewal deadline", "should_trigger": true},
+  {"query": "Search my Gmail for messages from legal@example.com", "should_trigger": true},
+  {"query": "Draft and send an email summarizing today's incident to stakeholders", "should_trigger": true},
+  {"query": "Check if there's a reply to the email I sent yesterday about the API contract", "should_trigger": true},
+  {"query": "Post a comment on issue #42 to notify the team", "should_trigger": false},
+  {"query": "Send a Slack message to the engineering channel", "should_trigger": false},
+  {"query": "Remember that the client prefers email over Slack", "should_trigger": false},
+  {"query": "Write up the changelog for the latest release", "should_trigger": false},
+  {"query": "Review PR #88 and post feedback", "should_trigger": false},
+  {"query": "Notify the team about the deployment via the Paperclip API", "should_trigger": false},
+  {"query": "Create a new agent to handle email processing", "should_trigger": false},
+  {"query": "Write a script to parse email templates", "should_trigger": false},
+  {"query": "Check the server logs for SMTP errors", "should_trigger": false},
+  {"query": "Update the contact list in the CRM", "should_trigger": false}
+]

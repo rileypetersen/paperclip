@@ -1,0 +1,28 @@
+{
+  "skill_name": "pr-report",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review PR #650 deeply and give me a maintainer-grade report. I want to understand the design decisions and whether I should merge it.",
+      "expected_output": "Produces a structured report with executive summary, system explanation, findings ordered by severity, and a concrete merge recommendation.",
+      "assertions": [
+        {"text": "Report contains an executive summary section", "type": "content_check"},
+        {"text": "Report includes findings ordered by severity", "type": "content_check"},
+        {"text": "Report ends with a concrete recommendation (merge/redesign/salvage/defer)", "type": "content_check"},
+        {"text": "Report artifact file is created (HTML or Markdown)", "type": "file_exists"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Make me a polished HTML webpage explaining the notification system PR. I want to share it with the team.",
+      "expected_output": "Creates a standalone HTML report with intentional typography, navigation, and sections covering what the PR adds, how the system works, and the review findings.",
+      "assertions": [
+        {"text": "HTML file is created in tmp/reports/ or a specified directory", "type": "file_exists"},
+        {"text": "HTML is standalone (no external dependencies)", "type": "content_check"},
+        {"text": "Includes tutorial-style explanation of how the system works", "type": "content_check"}
+      ],
+      "files": []
+    }
+  ]
+}

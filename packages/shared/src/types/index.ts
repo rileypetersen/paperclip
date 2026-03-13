@@ -4,6 +4,8 @@ export type {
   AgentPermissions,
   AgentKeyCreated,
   AgentConfigRevision,
+  AgentConfigFile,
+  AgentConfigFilesResponse,
   AdapterEnvironmentCheckLevel,
   AdapterEnvironmentTestStatus,
   AdapterEnvironmentCheck,

@@ -1,0 +1,28 @@
+{
+  "skill_name": "release-changelog",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Generate the changelog for the next patch release. We need to ship what's on master.",
+      "expected_output": "Creates releases/vX.Y.Z.md with categorized changes (Highlights, Improvements, Fixes), PR attribution where traceable, and a Contributors section.",
+      "assertions": [
+        {"text": "Creates a file at releases/vX.Y.Z.md with correct version", "type": "file_exists"},
+        {"text": "File contains Highlights, Improvements, and Fixes sections", "type": "content_check"},
+        {"text": "File contains a Contributors section with @-mentioned GitHub usernames", "type": "content_check"},
+        {"text": "Filename and heading use stable version only (no -canary suffix)", "type": "content_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "What changed since the last release? Give me a summary before we decide on the bump type.",
+      "expected_output": "Analyzes commits since last stable tag, checks for breaking changes and migrations, and presents a categorized summary with a bump recommendation.",
+      "assertions": [
+        {"text": "Identifies the last stable tag and lists commits since", "type": "action_check"},
+        {"text": "Checks for breaking changes (migrations, removed APIs, BREAKING commits)", "type": "action_check"},
+        {"text": "Recommends a bump type (patch/minor/major) with justification", "type": "content_check"}
+      ],
+      "files": []
+    }
+  ]
+}

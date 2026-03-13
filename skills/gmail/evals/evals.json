@@ -1,0 +1,39 @@
+{
+  "skill_name": "gmail",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Send an email to Riley letting him know the deployment is complete. Include a summary of what was deployed.",
+      "expected_output": "Sends email to riley@petersen.us using the send-email.sh script or raw RFC 2822 construction, with proper From alias, subject, and body. No approval needed (internal recipient).",
+      "assertions": [
+        {"text": "Uses AGENT_EMAIL as the From address", "type": "content_check"},
+        {"text": "Sends to riley@petersen.us (internal, no approval needed)", "type": "content_check"},
+        {"text": "Email body contains deployment summary", "type": "content_check"},
+        {"text": "Email includes signature block with role and @civ.bid address", "type": "content_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Check my inbox for any unread messages and summarize what's there.",
+      "expected_output": "Uses check-inbox.sh or gws +triage to query unread messages addressed to the agent's @civ.bid address, then summarizes findings.",
+      "assertions": [
+        {"text": "Queries inbox with to:$AGENT_EMAIL filter", "type": "command_check"},
+        {"text": "Filters for unread messages (is:unread)", "type": "command_check"},
+        {"text": "Presents a summary of found messages", "type": "content_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I need to email our investor at sarah@venturefirm.com about the Q1 results. Draft and send it.",
+      "expected_output": "Recognizes this is an external recipient, creates a Paperclip approval request before sending, and waits for approval.",
+      "assertions": [
+        {"text": "Identifies sarah@venturefirm.com as an external recipient (not @civ.bid or Riley's addresses)", "type": "content_check"},
+        {"text": "Creates a Paperclip approval request before sending", "type": "action_check"},
+        {"text": "Does NOT send the email before approval is granted", "type": "negative_check"}
+      ],
+      "files": []
+    }
+  ]
+}

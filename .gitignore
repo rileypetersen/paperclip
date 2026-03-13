@@ -41,3 +41,9 @@ tmp/
 # Playwright
 tests/e2e/test-results/
 tests/e2e/playwright-report/
+
+# Runtime logs
+logs/
+
+# Skill eval workspace artifacts
+*-workspace/

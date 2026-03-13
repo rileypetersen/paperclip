@@ -1,11 +1,14 @@
 ---
 name: paperclip
 description: >
-  Interact with the Paperclip control plane API to manage tasks, coordinate with
-  other agents, and follow company governance. Use when you need to check
-  assignments, update task status, delegate work, post comments, or call any
-  Paperclip API endpoint. Do NOT use for the actual domain work itself (writing
-  code, research, etc.) — only for Paperclip coordination.
+  Use this skill to interact with the Paperclip control plane API. Covers
+  heartbeat procedures, task checkout, status updates, issue comments,
+  approval handling, escalation, delegation, subtask creation, and project
+  setup. Use when you need to: run a heartbeat, check assignments, update
+  task status, post a comment on an issue, delegate work to another agent,
+  request or grant approval, escalate a blocker, create subtasks, or call
+  any Paperclip API endpoint. NOT for hiring agents (use paperclip-create-agent),
+  restarting the server (use paperclip-restart), or the domain work itself.
 ---
 
 # Paperclip Skill
@@ -63,6 +66,7 @@ If `PAPERCLIP_WAKE_COMMENT_ID` is set, find that specific comment first and trea
 
 **Step 8 — Update status and communicate.** Always include the run ID header.
 If you are blocked at any point, you MUST update the issue to `blocked` before exiting the heartbeat, with a comment that explains the blocker and who needs to act.
+When you need a human decision, resource, or approval, keep ownership of the issue unless a board user explicitly asks for handoff. Use the blocked comment to make the ask concrete instead of reassigning the task to the Board.
 
 ```json
 PATCH /api/issues/{issueId}
@@ -123,6 +127,7 @@ Access control:
 - **Never retry a 409.** The task belongs to someone else.
 - **Never look for unassigned work.**
 - **Self-assign only for explicit @-mention handoff.** This requires a mention-triggered wake with `PAPERCLIP_WAKE_COMMENT_ID` and a comment that clearly directs you to do the task. Use checkout (never direct assignee patch). Otherwise, no assignments = exit.
+- **Do not reassign work to the Board as a default escalation path.** If you need a resource, answer, or approval, keep the task assigned to yourself, set it to `blocked`, and leave a precise comment about what is needed.
 - **Honor "send it back to me" requests from board users.** If a board/user asks for review handoff (e.g. "let me review it", "assign it back to me"), reassign the issue to that user with `assigneeAgentId: null` and `assigneeUserId: "<requesting-user-id>"`, and typically set status to `in_review` instead of `done`.
   Resolve requesting user id from the triggering comment thread (`authorUserId`) when available; otherwise use the issue's `createdByUserId` if it matches the requester context.
 - **Always comment** on `in_progress` work before exiting a heartbeat — **except** for blocked tasks with no new context (see blocked-task dedup in Step 4).
@@ -131,7 +136,7 @@ Access control:
 - **Always update blocked issues explicitly.** If blocked, PATCH status to `blocked` with a blocker comment before exiting, then escalate. On subsequent heartbeats, do NOT repeat the same blocked comment — see blocked-task dedup in Step 4.
 - **@-mentions** (`@AgentName` in comments) trigger heartbeats — use sparingly, they cost budget.
 - **Budget**: auto-paused at 100%. Above 80%, focus on critical tasks only.
-- **Escalate** via `chainOfCommand` when stuck. Reassign to manager or create a task for them.
+- **Escalate** via `chainOfCommand` when stuck. Reassign to your manager or create a task for them when ownership truly needs to move; otherwise keep the issue blocked with a clear ask.
 - **Hiring**: use `paperclip-create-agent` skill for new agent creation workflows.
 - **Commit Co-author**: if you make a git commit you MUST add `Co-Authored-By: Paperclip <noreply@paperclip.ing>` to the end of each commit message
 
@@ -253,42 +258,9 @@ GET /api/companies/{companyId}/issues?q=dockerfile
 
 Results are ranked by relevance: title matches first, then identifier, description, and comments. You can combine `q` with other filters (`status`, `assigneeAgentId`, `projectId`, `labelId`).
 
-## Self-Test Playbook (App-Level)
+## Self-Test Playbook
 
-Use this when validating Paperclip itself (assignment flow, checkouts, run visibility, and status transitions).
-
-1. Create a throwaway issue assigned to a known local agent (`claudecoder` or `codexcoder`):
-
-```bash
-pnpm paperclipai issue create \
-  --company-id "$PAPERCLIP_COMPANY_ID" \
-  --title "Self-test: assignment/watch flow" \
-  --description "Temporary validation issue" \
-  --status todo \
-  --assignee-agent-id "$PAPERCLIP_AGENT_ID"
-```
-
-2. Trigger and watch a heartbeat for that assignee:
-
-```bash
-pnpm paperclipai heartbeat run --agent-id "$PAPERCLIP_AGENT_ID"
-```
-
-3. Verify the issue transitions (`todo -> in_progress -> done` or `blocked`) and that comments are posted:
-
-```bash
-pnpm paperclipai issue get <issue-id-or-identifier>
-```
-
-4. Reassignment test (optional): move the same issue between `claudecoder` and `codexcoder` and confirm wake/run behavior:
-
-```bash
-pnpm paperclipai issue update <issue-id> --assignee-agent-id <other-agent-id> --status todo
-```
-
-5. Cleanup: mark temporary issues done/cancelled with a clear note.
-
-If you use direct `curl` during these tests, include `X-Paperclip-Run-Id` on all mutating issue requests whenever running inside a heartbeat.
+For app-level validation of assignment flow, checkouts, run visibility, and status transitions, read: `skills/paperclip/references/self-test.md`
 
 ## Full Reference
 

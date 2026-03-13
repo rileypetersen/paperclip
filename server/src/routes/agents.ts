@@ -1,5 +1,6 @@
 import { Router, type Request } from "express";
 import { generateKeyPairSync, randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
 import type { Db } from "@paperclipai/db";
 import { agents as agentsTable, companies, heartbeatRuns } from "@paperclipai/db";
@@ -282,6 +283,67 @@ export function agentRoutes(db: Db) {
     return path.resolve(cwd, trimmed);
   }
 
+  function resolveConfiguredInstructionsPath(adapterConfig: Record<string, unknown>): string | null {
+    const configuredPath =
+      asNonEmptyString(adapterConfig.instructionsFilePath) ?? asNonEmptyString(adapterConfig.agentsMdPath);
+    if (!configuredPath) return null;
+    if (path.isAbsolute(configuredPath)) return configuredPath;
+
+    const cwd = asNonEmptyString(adapterConfig.cwd);
+    if (!cwd || !path.isAbsolute(cwd)) return null;
+    return path.resolve(cwd, configuredPath);
+  }
+
+  async function loadAgentConfigFiles(agent: NonNullable<Awaited<ReturnType<typeof svc.getById>>>) {
+    const adapterConfig = asRecord(agent.adapterConfig) ?? {};
+    const instructionsFilePath = resolveConfiguredInstructionsPath(adapterConfig);
+    if (!instructionsFilePath) {
+      return {
+        instructionsFilePath: null,
+        directoryPath: null,
+        files: [],
+      };
+    }
+
+    const directoryPath = path.dirname(instructionsFilePath);
+    const configuredBasename = path.basename(instructionsFilePath);
+    const candidates = [
+      { id: "agents", label: configuredBasename, path: instructionsFilePath },
+      ...(configuredBasename === "AGENTS.md"
+        ? []
+        : [{ id: "agents-default", label: "AGENTS.md", path: path.join(directoryPath, "AGENTS.md") }]),
+      { id: "soul", label: "SOUL.md", path: path.join(directoryPath, "SOUL.md") },
+      { id: "heartbeat", label: "HEARTBEAT.md", path: path.join(directoryPath, "HEARTBEAT.md") },
+      { id: "tools", label: "TOOLS.md", path: path.join(directoryPath, "TOOLS.md") },
+    ];
+
+    const files: Array<{ id: string; label: string; path: string; body: string }> = [];
+    const seenPaths = new Set<string>();
+
+    for (const candidate of candidates) {
+      const normalizedPath = path.normalize(candidate.path);
+      if (seenPaths.has(normalizedPath)) continue;
+      seenPaths.add(normalizedPath);
+      try {
+        const body = await fs.readFile(normalizedPath, "utf8");
+        files.push({
+          id: candidate.id,
+          label: candidate.label,
+          path: normalizedPath,
+          body,
+        });
+      } catch {
+        // Keep the response best-effort; missing sidecar files should not fail the page.
+      }
+    }
+
+    return {
+      instructionsFilePath,
+      directoryPath,
+      files,
+    };
+  }
+
   async function assertCanManageInstructionsPath(req: Request, targetAgent: { id: string; companyId: string }) {
     assertCompanyAccess(req, targetAgent.companyId);
     if (req.actor.type === "board") return;
@@ -511,6 +573,17 @@ export function agentRoutes(db: Db) {
     }
     await assertCanReadConfigurations(req, agent.companyId);
     res.json(redactAgentConfiguration(agent));
+  });
+
+  router.get("/agents/:id/config-files", async (req, res) => {
+    const id = req.params.id as string;
+    const agent = await svc.getById(id);
+    if (!agent) {
+      res.status(404).json({ error: "Agent not found" });
+      return;
+    }
+    await assertCanReadConfigurations(req, agent.companyId);
+    res.json(await loadAgentConfigFiles(agent));
   });
 
   router.get("/agents/:id/config-revisions", async (req, res) => {

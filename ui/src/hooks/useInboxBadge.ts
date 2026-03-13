@@ -9,13 +9,10 @@ import { issuesApi } from "../api/issues";
 import { queryKeys } from "../lib/queryKeys";
 import {
   computeInboxBadgeData,
-  getRecentTouchedIssues,
   loadDismissedInboxItems,
   saveDismissedInboxItems,
-  getUnreadTouchedIssues,
 } from "../lib/inbox";
-
-const INBOX_ISSUE_STATUSES = "backlog,todo,in_progress,in_review,blocked,done";
+const INBOX_ISSUE_STATUSES = "backlog,todo,in_progress,in_review,blocked";
 
 export function useDismissedInboxItems() {
   const [dismissed, setDismissed] = useState<Set<string>>(loadDismissedInboxItems);
@@ -72,20 +69,14 @@ export function useInboxBadge(companyId: string | null | undefined) {
     enabled: !!companyId,
   });
 
-  const { data: touchedIssues = [] } = useQuery({
-    queryKey: queryKeys.issues.listTouchedByMe(companyId!),
+  const { data: issues = [] } = useQuery({
+    queryKey: queryKeys.issues.listInboxActionable(companyId!),
     queryFn: () =>
       issuesApi.list(companyId!, {
-        touchedByUserId: "me",
         status: INBOX_ISSUE_STATUSES,
       }),
     enabled: !!companyId,
   });
-
-  const unreadIssues = useMemo(
-    () => getUnreadTouchedIssues(getRecentTouchedIssues(touchedIssues)),
-    [touchedIssues],
-  );
 
   const { data: heartbeatRuns = [] } = useQuery({
     queryKey: queryKeys.heartbeats(companyId!),
@@ -100,9 +91,9 @@ export function useInboxBadge(companyId: string | null | undefined) {
         joinRequests,
         dashboard,
         heartbeatRuns,
-        unreadIssues,
+        issues,
         dismissed,
       }),
-    [approvals, joinRequests, dashboard, heartbeatRuns, unreadIssues, dismissed],
+    [approvals, joinRequests, dashboard, heartbeatRuns, issues, dismissed],
   );
 }

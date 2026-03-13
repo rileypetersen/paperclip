@@ -1,9 +1,13 @@
 ---
 name: release
 description: >
-  Coordinate a full Paperclip release across engineering verification, npm,
-  GitHub, website publishing, and announcement follow-up. Use when leadership
-  asks to ship a release, not merely to discuss version bumps.
+  Use this skill to coordinate a full Paperclip release end-to-end. Use when
+  someone says "ship it", "do a release", "publish a version", "version bump",
+  "run a canary", "release vX.Y.Z", or "publish the next patch/minor/major".
+  Covers the full release train: engineering verification, changelog generation,
+  canary publish, smoke testing, stable npm publish, git tagging, GitHub Release
+  creation, and announcement follow-up. NOT for just writing changelogs (use
+  release-changelog) or deploying infrastructure.
 ---
 
 # Release Coordination Skill

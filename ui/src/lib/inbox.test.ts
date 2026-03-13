@@ -4,8 +4,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Approval, DashboardSummary, HeartbeatRun, Issue, JoinRequest } from "@paperclipai/shared";
 import {
   computeInboxBadgeData,
+  getBlockedIssues,
   getRecentTouchedIssues,
   getUnreadTouchedIssues,
+  getUnassignedIssues,
   loadLastInboxTab,
   RECENT_ISSUES_LIMIT,
   saveLastInboxTab,
@@ -105,7 +107,11 @@ function makeRun(id: string, status: HeartbeatRun["status"], createdAt: string, 
   };
 }
 
-function makeIssue(id: string, isUnreadForMe: boolean): Issue {
+function makeIssue(
+  id: string,
+  isUnreadForMe: boolean,
+  overrides: Partial<Issue> = {},
+): Issue {
   return {
     id,
     companyId: "company-1",
@@ -141,6 +147,7 @@ function makeIssue(id: string, isUnreadForMe: boolean): Issue {
     myLastTouchAt: new Date("2026-03-11T00:00:00.000Z"),
     lastExternalCommentAt: new Date("2026-03-11T01:00:00.000Z"),
     isUnreadForMe,
+    ...overrides,
   };
 }
 
@@ -181,16 +188,20 @@ describe("inbox helpers", () => {
         makeRun("run-latest", "timed_out", "2026-03-11T01:00:00.000Z"),
         makeRun("run-other-agent", "failed", "2026-03-11T02:00:00.000Z", "agent-2"),
       ],
-      unreadIssues: [makeIssue("1", true)],
+      issues: [
+        makeIssue("1", true, { status: "blocked" }),
+        makeIssue("2", false, { status: "todo", assigneeAgentId: null, assigneeUserId: null }),
+      ],
       dismissed: new Set<string>(),
     });
 
     expect(result).toEqual({
-      inbox: 6,
+      inbox: 7,
       approvals: 1,
       failedRuns: 2,
       joinRequests: 1,
-      unreadTouchedIssues: 1,
+      blockedIssues: 1,
+      unassignedIssues: 1,
       alerts: 1,
     });
   });
@@ -201,7 +212,7 @@ describe("inbox helpers", () => {
       joinRequests: [],
       dashboard,
       heartbeatRuns: [makeRun("run-1", "failed", "2026-03-11T00:00:00.000Z")],
-      unreadIssues: [],
+      issues: [],
       dismissed: new Set<string>(["run:run-1", "alert:budget", "alert:agent-errors"]),
     });
 
@@ -210,9 +221,22 @@ describe("inbox helpers", () => {
       approvals: 0,
       failedRuns: 0,
       joinRequests: 0,
-      unreadTouchedIssues: 0,
+      blockedIssues: 0,
+      unassignedIssues: 0,
       alerts: 0,
     });
+  });
+
+  it("classifies blocked and unassigned issues for board action", () => {
+    const issues = [
+      makeIssue("1", false, { status: "blocked" }),
+      makeIssue("2", false, { status: "todo", assigneeAgentId: "agent-1" }),
+      makeIssue("3", false, { status: "todo", assigneeAgentId: null, assigneeUserId: null }),
+      makeIssue("4", false, { status: "done", assigneeAgentId: null, assigneeUserId: null }),
+    ];
+
+    expect(getBlockedIssues(issues).map((issue) => issue.id)).toEqual(["1"]);
+    expect(getUnassignedIssues(issues).map((issue) => issue.id)).toEqual(["1", "3"]);
   });
 
   it("keeps read issues in the touched list but excludes them from unread counts", () => {
@@ -235,16 +259,18 @@ describe("inbox helpers", () => {
     expect(getUnreadTouchedIssues(recentIssues).map((issue) => issue.id)).toEqual(["1", "2", "3"]);
   });
 
-  it("defaults the remembered inbox tab to recent and persists all", () => {
+  it("defaults the remembered inbox tab to needs action and persists all", () => {
     localStorage.clear();
-    expect(loadLastInboxTab()).toBe("recent");
+    expect(loadLastInboxTab()).toBe("needs-action");
 
     saveLastInboxTab("all");
     expect(loadLastInboxTab()).toBe("all");
   });
 
-  it("maps legacy new-tab storage to recent", () => {
+  it("maps legacy recent-style storage to needs action", () => {
     localStorage.setItem("paperclip:inbox:last-tab", "new");
-    expect(loadLastInboxTab()).toBe("recent");
+    expect(loadLastInboxTab()).toBe("needs-action");
+    localStorage.setItem("paperclip:inbox:last-tab", "recent");
+    expect(loadLastInboxTab()).toBe("needs-action");
   });
 });

@@ -6,11 +6,13 @@ import {
   AUTH_BASE_URL_MODES,
   DEPLOYMENT_EXPOSURES,
   DEPLOYMENT_MODES,
+  NOTIFICATION_PROVIDERS,
   SECRET_PROVIDERS,
   STORAGE_PROVIDERS,
   type AuthBaseUrlMode,
   type DeploymentExposure,
   type DeploymentMode,
+  type NotificationProvider,
   type SecretProvider,
   type StorageProvider,
 } from "@paperclipai/shared";
@@ -28,6 +30,17 @@ if (existsSync(PAPERCLIP_ENV_FILE_PATH)) {
 }
 
 type DatabaseMode = "embedded-postgres" | "postgres";
+
+export interface NotificationsConfig {
+  provider: NotificationProvider;
+  boardEmails: string[];
+  command: {
+    path: string | undefined;
+    args: string[];
+  };
+  stalledThresholdMinutes: number;
+  stalledCooldownMinutes: number;
+}
 
 export interface Config {
   deploymentMode: DeploymentMode;
@@ -58,9 +71,67 @@ export interface Config {
   storageS3Endpoint: string | undefined;
   storageS3Prefix: string;
   storageS3ForcePathStyle: boolean;
+  notifications: NotificationsConfig;
   heartbeatSchedulerEnabled: boolean;
   heartbeatSchedulerIntervalMs: number;
   companyDeletionEnabled: boolean;
+}
+
+export function parseEmailList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return Array.from(
+    new Set(
+      raw
+        .split(",")
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    ),
+  );
+}
+
+export function resolveNotificationsConfig(): NotificationsConfig {
+  const fileConfig = readConfigFile();
+  const fileNotifications = fileConfig?.notifications;
+  const providerRaw = process.env.PAPERCLIP_NOTIFICATIONS_PROVIDER?.trim();
+  const provider =
+    providerRaw && NOTIFICATION_PROVIDERS.includes(providerRaw as NotificationProvider)
+      ? (providerRaw as NotificationProvider)
+      : (fileNotifications?.provider ?? "disabled");
+
+  const boardEmails =
+    process.env.PAPERCLIP_BOARD_NOTIFICATION_EMAILS !== undefined
+      ? parseEmailList(process.env.PAPERCLIP_BOARD_NOTIFICATION_EMAILS)
+      : (fileNotifications?.boardEmails ?? []);
+
+  const commandPath =
+    process.env.PAPERCLIP_NOTIFICATIONS_COMMAND?.trim() ||
+    fileNotifications?.command.path?.trim() ||
+    undefined;
+
+  const stalledThresholdMinutes = Math.max(
+    1,
+    Number(process.env.PAPERCLIP_STALLED_WORK_THRESHOLD_MINUTES) ||
+      fileNotifications?.stalledThresholdMinutes ||
+      240,
+  );
+
+  const stalledCooldownMinutes = Math.max(
+    1,
+    Number(process.env.PAPERCLIP_STALLED_WORK_COOLDOWN_MINUTES) ||
+      fileNotifications?.stalledCooldownMinutes ||
+      1440,
+  );
+
+  return {
+    provider,
+    boardEmails,
+    command: {
+      path: commandPath,
+      args: [...(fileNotifications?.command.args ?? [])],
+    },
+    stalledThresholdMinutes,
+    stalledCooldownMinutes,
+  };
 }
 
 export function loadConfig(): Config {
@@ -75,6 +146,7 @@ export function loadConfig(): Config {
   const fileDatabaseBackup = fileConfig?.database.backup;
   const fileSecrets = fileConfig?.secrets;
   const fileStorage = fileConfig?.storage;
+  const notifications = resolveNotificationsConfig();
   const strictModeFromEnv = process.env.PAPERCLIP_SECRETS_STRICT_MODE;
   const secretsStrictMode =
     strictModeFromEnv !== undefined
@@ -240,6 +312,7 @@ export function loadConfig(): Config {
     storageS3Endpoint,
     storageS3Prefix,
     storageS3ForcePathStyle,
+    notifications,
     heartbeatSchedulerEnabled: process.env.HEARTBEAT_SCHEDULER_ENABLED !== "false",
     heartbeatSchedulerIntervalMs: Math.max(10000, Number(process.env.HEARTBEAT_SCHEDULER_INTERVAL_MS) || 30000),
     companyDeletionEnabled,

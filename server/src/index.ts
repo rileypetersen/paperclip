@@ -25,7 +25,11 @@ import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { logger } from "./middleware/logger.js";
 import { setupLiveEventsWebSocketServer } from "./realtime/live-events-ws.js";
-import { heartbeatService, reconcilePersistedRuntimeServicesOnStartup } from "./services/index.js";
+import {
+  createNotificationService,
+  heartbeatService,
+  reconcilePersistedRuntimeServicesOnStartup,
+} from "./services/index.js";
 import { createStorageServiceFromConfig } from "./storage/index.js";
 import { printStartupBanner } from "./startup-banner.js";
 import { getBoardClaimWarningUrl, initializeBoardClaimChallenge } from "./board-claim.js";
@@ -463,6 +467,17 @@ export async function startServer(): Promise<StartedServer> {
   const listenPort = await detectPort(config.port);
   const uiMode = config.uiDevMiddleware ? "vite-dev" : config.serveUi ? "static" : "none";
   const storageService = createStorageServiceFromConfig(config);
+  const runtimeApiHost =
+    config.host === "0.0.0.0" || config.host === "::"
+      ? "localhost"
+      : config.host;
+  const runtimeApiUrl = `http://${runtimeApiHost}:${listenPort}`;
+  const notificationService = createNotificationService({
+    db: db as any,
+    config: config.notifications,
+    authPublicBaseUrl: config.authPublicBaseUrl,
+    runtimeBaseUrl: runtimeApiUrl,
+  });
   const app = await createApp(db as any, {
     uiMode,
     serverPort: listenPort,
@@ -473,6 +488,7 @@ export async function startServer(): Promise<StartedServer> {
     bindHost: config.host,
     authReady,
     companyDeletionEnabled: config.companyDeletionEnabled,
+    notificationService,
     betterAuthHandler,
     resolveSession,
   });
@@ -483,13 +499,9 @@ export async function startServer(): Promise<StartedServer> {
   }
   
   const runtimeListenHost = config.host;
-  const runtimeApiHost =
-    runtimeListenHost === "0.0.0.0" || runtimeListenHost === "::"
-      ? "localhost"
-      : runtimeListenHost;
   process.env.PAPERCLIP_LISTEN_HOST = runtimeListenHost;
   process.env.PAPERCLIP_LISTEN_PORT = String(listenPort);
-  process.env.PAPERCLIP_API_URL = `http://${runtimeApiHost}:${listenPort}`;
+  process.env.PAPERCLIP_API_URL = runtimeApiUrl;
   
   setupLiveEventsWebSocketServer(server, db as any, {
     deploymentMode: config.deploymentMode,
@@ -518,8 +530,9 @@ export async function startServer(): Promise<StartedServer> {
     });
 
     setInterval(() => {
+      const now = new Date();
       void heartbeat
-        .tickTimers(new Date())
+        .tickTimers(now)
         .then((result) => {
           if (result.enqueued > 0) {
             logger.info({ ...result }, "heartbeat timer tick enqueued runs");
@@ -527,6 +540,17 @@ export async function startServer(): Promise<StartedServer> {
         })
         .catch((err) => {
           logger.error({ err }, "heartbeat timer tick failed");
+        });
+
+      void notificationService
+        .tickBoardStalledIssues(now)
+        .then((result) => {
+          if (result.sent > 0) {
+            logger.info({ ...result }, "board stalled issue notification tick sent notifications");
+          }
+        })
+        .catch((err) => {
+          logger.error({ err }, "board stalled issue notification tick failed");
         });
   
       // Periodically reap orphaned runs (5-min staleness threshold)

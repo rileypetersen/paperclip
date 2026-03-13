@@ -1,0 +1,22 @@
+[
+  {"query": "We need to hire a CTO agent to oversee technical strategy", "should_trigger": true},
+  {"query": "Staff up the team — add a backend developer agent", "should_trigger": true},
+  {"query": "Create a new agent for handling customer support tickets", "should_trigger": true},
+  {"query": "I want to onboard a new QA agent to the team", "should_trigger": true},
+  {"query": "Let's expand the team with a DevOps agent", "should_trigger": true},
+  {"query": "Submit a hire request for a data analyst role", "should_trigger": true},
+  {"query": "What adapter configurations are available for new agents?", "should_trigger": true},
+  {"query": "Compare the existing agent configs to decide on settings for a new hire", "should_trigger": true},
+  {"query": "Draft the system prompt for a new frontend developer agent", "should_trigger": true},
+  {"query": "Add a new role to the team — we need a security auditor agent", "should_trigger": true},
+  {"query": "Delegate this task to the backend agent", "should_trigger": false},
+  {"query": "Check what agents are currently active in the system", "should_trigger": false},
+  {"query": "Build a new adapter so Paperclip can use Gemini as a runtime", "should_trigger": false},
+  {"query": "Set up a new team member's local development environment", "should_trigger": false},
+  {"query": "Update the existing CTO agent's system prompt", "should_trigger": false},
+  {"query": "Run my heartbeat and pick up tasks", "should_trigger": false},
+  {"query": "Send an onboarding email to the new hire", "should_trigger": false},
+  {"query": "Restart the agent that's been unresponsive", "should_trigger": false},
+  {"query": "Review the PR that adds agent configuration options", "should_trigger": false},
+  {"query": "Remember that we prefer Claude over GPT for new agents", "should_trigger": false}
+]
