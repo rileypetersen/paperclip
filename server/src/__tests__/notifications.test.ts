@@ -31,6 +31,7 @@ function makeConfig(overrides?: Partial<NotificationsConfig>): NotificationsConf
     provider: "command",
     boardEmails: ["board@example.com"],
     webhookUrl: undefined,
+    discord: undefined,
     command,
     stalledThresholdMinutes: 240,
     stalledCooldownMinutes: 1440,

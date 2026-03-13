@@ -29,11 +29,13 @@ describe("resolveNotificationsConfig", () => {
     delete process.env.PAPERCLIP_STALLED_WORK_THRESHOLD_MINUTES;
     delete process.env.PAPERCLIP_STALLED_WORK_COOLDOWN_MINUTES;
     delete process.env.PAPERCLIP_NOTIFICATIONS_WEBHOOK_URL;
+    delete process.env.PAPERCLIP_DISCORD_BOT_TOKEN;
 
     expect(resolveNotificationsConfig()).toEqual({
       provider: "disabled",
       boardEmails: [],
       webhookUrl: undefined,
+      discord: undefined,
       command: {
         path: undefined,
         args: [],
@@ -103,6 +105,7 @@ describe("resolveNotificationsConfig", () => {
       provider: "command",
       boardEmails: ["board@example.com"],
       webhookUrl: undefined,
+      discord: undefined,
       command: {
         path: "/tmp/send-board-email",
         args: ["--flag"],
@@ -165,5 +168,39 @@ describe("resolveNotificationsConfig", () => {
     const config = resolveNotificationsConfig();
     expect(config.provider).toBe("webhook");
     expect(config.webhookUrl).toBe("https://hooks.slack.com/test");
+  });
+
+  it("resolves discord provider with config from file and bot token from env", () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-notifications-config-"));
+    const configPath = path.join(tempDir, "config.json");
+    process.env.PAPERCLIP_CONFIG = configPath;
+    process.env.PAPERCLIP_DISCORD_BOT_TOKEN = "test-bot-token-123";
+    writeJson(configPath, {
+      $meta: { version: 1, updatedAt: "2026-03-13T00:00:00.000Z", source: "configure" },
+      database: {
+        mode: "embedded-postgres",
+        embeddedPostgresDataDir: "~/.paperclip/instances/default/db",
+        embeddedPostgresPort: 54329,
+        backup: { enabled: true, intervalMinutes: 60, retentionDays: 30, dir: "~/.paperclip/instances/default/data/backups" },
+      },
+      logging: { mode: "file", logDir: "~/.paperclip/instances/default/logs" },
+      server: { deploymentMode: "local_trusted", exposure: "private", host: "127.0.0.1", port: 3100, allowedHostnames: [], serveUi: true },
+      notifications: {
+        provider: "discord",
+        boardEmails: [],
+        discord: { channelId: "123456789", userMappings: [{ discordUserId: "111", paperclipUserId: "user-1" }] },
+        command: { args: [] },
+        stalledThresholdMinutes: 240,
+        stalledCooldownMinutes: 1440,
+      },
+    });
+
+    const config = resolveNotificationsConfig();
+    expect(config.provider).toBe("discord");
+    expect(config.discord).toEqual({
+      botToken: "test-bot-token-123",
+      channelId: "123456789",
+      userMappings: [{ discordUserId: "111", paperclipUserId: "user-1" }],
+    });
   });
 });

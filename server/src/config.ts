@@ -35,6 +35,11 @@ export interface NotificationsConfig {
   provider: NotificationProvider;
   boardEmails: string[];
   webhookUrl: string | undefined;
+  discord: {
+    botToken: string | undefined;
+    channelId: string;
+    userMappings: Array<{ discordUserId: string; paperclipUserId: string }>;
+  } | undefined;
   command: {
     path: string | undefined;
     args: string[];
@@ -109,6 +114,16 @@ export function resolveNotificationsConfig(): NotificationsConfig {
     fileNotifications?.webhookUrl?.trim() ||
     undefined;
 
+  const discordBotToken = process.env.PAPERCLIP_DISCORD_BOT_TOKEN?.trim() || undefined;
+  const fileDiscord = fileNotifications?.discord;
+  const discord = fileDiscord
+    ? {
+        botToken: discordBotToken,
+        channelId: fileDiscord.channelId,
+        userMappings: [...fileDiscord.userMappings],
+      }
+    : undefined;
+
   const commandPath =
     process.env.PAPERCLIP_NOTIFICATIONS_COMMAND?.trim() ||
     fileNotifications?.command.path?.trim() ||
@@ -132,6 +147,7 @@ export function resolveNotificationsConfig(): NotificationsConfig {
     provider,
     boardEmails,
     webhookUrl,
+    discord,
     command: {
       path: commandPath,
       args: [...(fileNotifications?.command.args ?? [])],

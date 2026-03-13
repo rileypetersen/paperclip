@@ -73,7 +73,10 @@ export interface BoardMarkerMatch {
 
 export interface NotificationDeliveryProvider {
   provider: NotificationProviderType;
-  deliver(notification: BoardNotificationPayload): Promise<{ ok: true } | { ok: false; error: string }>;
+  deliver(notification: BoardNotificationPayload): Promise<
+    | { ok: true; metadata?: Record<string, string> }
+    | { ok: false; error: string }
+  >;
 }
 
 export interface NotificationRepository {
