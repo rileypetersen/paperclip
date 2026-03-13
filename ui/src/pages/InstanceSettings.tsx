@@ -224,6 +224,7 @@ function NotificationsSection() {
     provider: "disabled",
     boardEmails: [],
     webhookUrl: "",
+    discord: { channelId: "", userMappings: [] },
     command: { path: "", args: [] },
     stalledThresholdMinutes: 240,
     stalledCooldownMinutes: 1440,
@@ -259,6 +260,7 @@ function NotificationsSection() {
   const handleSave = () => {
     const payload = { ...form };
     if (payload.provider !== "webhook") delete (payload as any).webhookUrl;
+    if (payload.provider !== "discord") delete (payload as any).discord;
     saveMutation.mutate(payload);
   };
 
@@ -269,7 +271,7 @@ function NotificationsSection() {
         <div>
           <label className="text-sm font-medium">Provider</label>
           <div className="flex gap-4 mt-1">
-            {(["disabled", "webhook", "command"] as const).map((p) => (
+            {(["disabled", "webhook", "discord", "command"] as const).map((p) => (
               <label key={p} className="flex items-center gap-1.5 text-sm">
                 <input
                   type="radio"
@@ -298,6 +300,83 @@ function NotificationsSection() {
               Paste a Discord or Slack webhook URL
             </p>
           </div>
+        )}
+
+        {form.provider === "discord" && (
+          <>
+            <div>
+              <label className="text-sm font-medium">Channel ID</label>
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                placeholder="Discord channel ID"
+                value={form.discord?.channelId ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    discord: {
+                      ...form.discord,
+                      channelId: e.target.value,
+                      userMappings: form.discord?.userMappings ?? [],
+                    },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">User Mappings</label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Map Discord user IDs to Paperclip user IDs
+              </p>
+              {(form.discord?.userMappings ?? []).map((mapping, i) => (
+                <div key={i} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+                    placeholder="Discord User ID"
+                    value={mapping.discordUserId}
+                    onChange={(e) => {
+                      const mappings = [...(form.discord?.userMappings ?? [])];
+                      mappings[i] = { ...mappings[i], discordUserId: e.target.value };
+                      setForm({ ...form, discord: { ...form.discord!, userMappings: mappings } });
+                    }}
+                  />
+                  <input
+                    type="text"
+                    className="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+                    placeholder="Paperclip User ID"
+                    value={mapping.paperclipUserId}
+                    onChange={(e) => {
+                      const mappings = [...(form.discord?.userMappings ?? [])];
+                      mappings[i] = { ...mappings[i], paperclipUserId: e.target.value };
+                      setForm({ ...form, discord: { ...form.discord!, userMappings: mappings } });
+                    }}
+                  />
+                  <button
+                    className="text-sm text-red-500 hover:text-red-700 px-2"
+                    onClick={() => {
+                      const mappings = (form.discord?.userMappings ?? []).filter((_, j) => j !== i);
+                      setForm({ ...form, discord: { ...form.discord!, userMappings: mappings } });
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                className="text-sm text-primary hover:underline"
+                onClick={() => {
+                  const mappings = [...(form.discord?.userMappings ?? []), { discordUserId: "", paperclipUserId: "" }];
+                  setForm({ ...form, discord: { ...form.discord!, channelId: form.discord?.channelId ?? "", userMappings: mappings } });
+                }}
+              >
+                + Add mapping
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Set PAPERCLIP_DISCORD_BOT_TOKEN env var before enabling
+            </p>
+          </>
         )}
 
         {form.provider === "command" && (
