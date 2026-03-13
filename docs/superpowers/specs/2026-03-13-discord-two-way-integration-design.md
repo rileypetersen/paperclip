@@ -89,6 +89,8 @@ When a notification fires:
 
 Embed format is the same as the existing `formatDiscordPayload` (color-coded by notification kind, fields for company/status, footer).
 
+All outbound messages (both initial thread embeds and follow-up notifications in existing threads) are prefixed with `<@discordUserId>` mentions for each user in `userMappings`. This ensures board members receive Discord notifications for every Paperclip event, since Discord only notifies on explicit mentions in threads.
+
 Thread naming: `[ACM-42] Fix auth bug` — identifier + title, truncated to Discord's 100-char thread name limit.
 
 ## Inbound Flow (Discord Reply → Issue Comment)
