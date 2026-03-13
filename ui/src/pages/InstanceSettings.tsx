@@ -4,6 +4,7 @@ import { Clock3, ExternalLink, Settings } from "lucide-react";
 import type { InstanceSchedulerHeartbeatAgent } from "@paperclipai/shared";
 import { Link } from "@/lib/router";
 import { heartbeatsApi } from "../api/heartbeats";
+import { notificationsApi, type NotificationsConfig } from "../api/notifications";
 import { agentsApi } from "../api/agents";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { EmptyState } from "../components/EmptyState";
@@ -206,6 +207,205 @@ export function InstanceSettings() {
           ))}
         </div>
       )}
+
+      <NotificationsSection />
+    </div>
+  );
+}
+
+function NotificationsSection() {
+  const queryClient = useQueryClient();
+  const { data: config, isLoading } = useQuery({
+    queryKey: queryKeys.instance.notifications,
+    queryFn: notificationsApi.get,
+  });
+
+  const [form, setForm] = useState<NotificationsConfig>({
+    provider: "disabled",
+    boardEmails: [],
+    webhookUrl: "",
+    command: { path: "", args: [] },
+    stalledThresholdMinutes: 240,
+    stalledCooldownMinutes: 1440,
+  });
+  const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
+
+  useEffect(() => {
+    if (config) {
+      setForm({
+        ...config,
+        webhookUrl: config.webhookUrl ?? "",
+        command: config.command ?? { path: "", args: [] },
+      });
+    }
+  }, [config]);
+
+  const saveMutation = useMutation({
+    mutationFn: notificationsApi.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.instance.notifications });
+      setTestResult(null);
+    },
+  });
+
+  const testMutation = useMutation({
+    mutationFn: notificationsApi.test,
+    onSuccess: (result) => setTestResult(result),
+    onError: (err) => setTestResult({ ok: false, error: String(err) }),
+  });
+
+  if (isLoading) return <div className="p-6 text-muted-foreground">Loading...</div>;
+
+  const handleSave = () => {
+    const payload = { ...form };
+    if (payload.provider !== "webhook") delete (payload as any).webhookUrl;
+    saveMutation.mutate(payload);
+  };
+
+  return (
+    <div id="notifications" className="space-y-4">
+      <h2 className="text-lg font-semibold">Notifications</h2>
+      <div className="rounded-lg border bg-card p-6 space-y-4">
+        <div>
+          <label className="text-sm font-medium">Provider</label>
+          <div className="flex gap-4 mt-1">
+            {(["disabled", "webhook", "command"] as const).map((p) => (
+              <label key={p} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="radio"
+                  name="provider"
+                  value={p}
+                  checked={form.provider === p}
+                  onChange={() => setForm({ ...form, provider: p })}
+                />
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {form.provider === "webhook" && (
+          <div>
+            <label className="text-sm font-medium">Webhook URL</label>
+            <input
+              type="url"
+              className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="https://discord.com/api/webhooks/..."
+              value={form.webhookUrl ?? ""}
+              onChange={(e) => setForm({ ...form, webhookUrl: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Paste a Discord or Slack webhook URL
+            </p>
+          </div>
+        )}
+
+        {form.provider === "command" && (
+          <>
+            <div>
+              <label className="text-sm font-medium">Command path</label>
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={form.command?.path ?? ""}
+                onChange={(e) =>
+                  setForm({ ...form, command: { ...form.command, path: e.target.value } })
+                }
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Arguments</label>
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                placeholder="--flag1 --flag2"
+                value={form.command?.args?.join(" ") ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    command: { ...form.command, args: e.target.value.split(/\s+/).filter(Boolean) },
+                  })
+                }
+              />
+            </div>
+          </>
+        )}
+
+        {form.provider !== "disabled" && (
+          <>
+            <div>
+              <label className="text-sm font-medium">Board notification emails</label>
+              <input
+                type="text"
+                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                placeholder="you@example.com (optional for webhook)"
+                value={form.boardEmails.join(", ")}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    boardEmails: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                  })
+                }
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Stale alert threshold (minutes)</label>
+                <input
+                  type="number"
+                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={form.stalledThresholdMinutes}
+                  onChange={(e) =>
+                    setForm({ ...form, stalledThresholdMinutes: Number(e.target.value) || 240 })
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Re-alert cooldown (minutes)</label>
+                <input
+                  type="number"
+                  className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={form.stalledCooldownMinutes}
+                  onChange={(e) =>
+                    setForm({ ...form, stalledCooldownMinutes: Number(e.target.value) || 1440 })
+                  }
+                />
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <button
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium disabled:opacity-50"
+            onClick={handleSave}
+            disabled={saveMutation.isPending}
+          >
+            {saveMutation.isPending ? "Saving..." : "Save"}
+          </button>
+          {form.provider !== "disabled" && (
+            <button
+              className="px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50"
+              onClick={() => testMutation.mutate()}
+              disabled={testMutation.isPending}
+            >
+              {testMutation.isPending ? "Sending..." : "Send test notification"}
+            </button>
+          )}
+        </div>
+
+        {saveMutation.isSuccess && (
+          <p className="text-sm text-green-600">Saved and reloaded.</p>
+        )}
+        {saveMutation.isError && (
+          <p className="text-sm text-red-600">Save failed: {String(saveMutation.error)}</p>
+        )}
+        {testResult && (
+          <p className={`text-sm ${testResult.ok ? "text-green-600" : "text-red-600"}`}>
+            {testResult.ok ? "Test notification sent!" : `Test failed: ${testResult.error}`}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

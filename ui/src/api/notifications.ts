@@ -1,0 +1,17 @@
+import { api } from "./client";
+
+export interface NotificationsConfig {
+  provider: "disabled" | "command" | "webhook";
+  boardEmails: string[];
+  webhookUrl?: string;
+  command: { path?: string; args: string[] };
+  stalledThresholdMinutes: number;
+  stalledCooldownMinutes: number;
+}
+
+export const notificationsApi = {
+  get: () => api.get<NotificationsConfig>("/instance/notifications"),
+  update: (data: NotificationsConfig) =>
+    api.patch<NotificationsConfig>("/instance/notifications", data),
+  test: () => api.post<{ ok: boolean; error?: string }>("/instance/notifications/test", {}),
+};
