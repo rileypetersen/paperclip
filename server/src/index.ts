@@ -28,9 +28,11 @@ import { setupLiveEventsWebSocketServer } from "./realtime/live-events-ws.js";
 import {
   createNotificationService,
   createWebhookNotificationProvider,
+  DiscordNotificationProvider,
   heartbeatService,
   reconcilePersistedRuntimeServicesOnStartup,
 } from "./services/index.js";
+import { issueService } from "./services/issues.js";
 import { resolveNotificationsConfig } from "./config.js";
 import { createStorageServiceFromConfig } from "./storage/index.js";
 import { printStartupBanner } from "./startup-banner.js";
@@ -476,27 +478,86 @@ export async function startServer(): Promise<StartedServer> {
       ? "localhost"
       : config.host;
   const runtimeApiUrl = `http://${runtimeApiHost}:${listenPort}`;
-  const initialWebhookProvider =
-    config.notifications.provider === "webhook" && config.notifications.webhookUrl
-      ? createWebhookNotificationProvider(config.notifications.webhookUrl)
-      : undefined;
+  const dbRef = db as any;
+  let discordProvider: DiscordNotificationProvider | null = null;
+
+  function buildDiscordDeps() {
+    return {
+      db: dbRef,
+      onInboundComment: async (issueId: string, body: string, userId: string) => {
+        const svc = issueService(dbRef);
+        await svc.addComment(issueId, body, { userId });
+      },
+    };
+  }
+
+  const initialProvider = (() => {
+    if (config.notifications.provider === "webhook" && config.notifications.webhookUrl) {
+      return createWebhookNotificationProvider(config.notifications.webhookUrl);
+    }
+    if (config.notifications.provider === "discord" && config.notifications.discord?.botToken) {
+      discordProvider = new DiscordNotificationProvider(
+        {
+          botToken: config.notifications.discord.botToken,
+          channelId: config.notifications.discord.channelId,
+          userMappings: config.notifications.discord.userMappings,
+        },
+        buildDiscordDeps(),
+      );
+      return discordProvider;
+    }
+    return undefined;
+  })();
+
   const notificationRef = {
     current: createNotificationService({
-      db: db as any,
+      db: dbRef,
       config: config.notifications,
-      provider: initialWebhookProvider,
+      provider: initialProvider,
       authPublicBaseUrl: config.authPublicBaseUrl,
       runtimeBaseUrl: runtimeApiUrl,
     }),
   };
 
-  const dbRef = db as any;
   function reloadNotificationConfig() {
     const newConfig = resolveNotificationsConfig();
-    const provider =
-      newConfig.provider === "webhook" && newConfig.webhookUrl
-        ? createWebhookNotificationProvider(newConfig.webhookUrl)
-        : undefined;
+    let provider: ReturnType<typeof createWebhookNotificationProvider> | DiscordNotificationProvider | undefined;
+
+    if (newConfig.provider === "webhook" && newConfig.webhookUrl) {
+      if (discordProvider) {
+        void discordProvider.stop();
+        discordProvider = null;
+      }
+      provider = createWebhookNotificationProvider(newConfig.webhookUrl);
+    } else if (newConfig.provider === "discord" && newConfig.discord?.botToken) {
+      if (discordProvider) {
+        discordProvider.updateConfig({
+          botToken: newConfig.discord.botToken,
+          channelId: newConfig.discord.channelId,
+          userMappings: newConfig.discord.userMappings,
+        });
+        provider = discordProvider;
+      } else {
+        discordProvider = new DiscordNotificationProvider(
+          {
+            botToken: newConfig.discord.botToken,
+            channelId: newConfig.discord.channelId,
+            userMappings: newConfig.discord.userMappings,
+          },
+          buildDiscordDeps(),
+        );
+        void discordProvider.start().catch((err) => {
+          logger.error({ err }, "failed to start discord provider on reload");
+        });
+        provider = discordProvider;
+      }
+    } else {
+      if (discordProvider) {
+        void discordProvider.stop();
+        discordProvider = null;
+      }
+    }
+
     notificationRef.current = createNotificationService({
       db: dbRef,
       config: newConfig,
@@ -520,6 +581,7 @@ export async function startServer(): Promise<StartedServer> {
     notificationService: notificationRef,
     reloadNotificationConfig,
     getNotificationsConfig: () => resolveNotificationsConfig(),
+    getDiscordStatus: () => ({ connected: discordProvider?.isConnected ?? false }),
     betterAuthHandler,
     resolveSession,
   });
@@ -697,12 +759,23 @@ export async function startServer(): Promise<StartedServer> {
         );
       }
 
+      // Start Discord provider after server is listening
+      if (discordProvider) {
+        void discordProvider.start().catch((err) => {
+          logger.error({ err }, "failed to start discord notification provider");
+        });
+      }
+
       resolveListen();
     });
   });
   
   if (embeddedPostgres && embeddedPostgresStartedByThisProcess) {
     const shutdown = async (signal: "SIGINT" | "SIGTERM") => {
+      if (discordProvider) {
+        logger.info("Stopping Discord notification provider");
+        await discordProvider.stop().catch(() => {});
+      }
       logger.info({ signal }, "Stopping embedded PostgreSQL");
       try {
         await embeddedPostgres?.stop();

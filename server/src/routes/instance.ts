@@ -15,6 +15,7 @@ export function instanceRoutes(
   opts: {
     reloadNotificationConfig: () => void;
     getNotificationsConfig: () => NotificationsConfig;
+    getDiscordStatus?: () => { connected: boolean };
   },
 ) {
   const router = Router();
@@ -23,6 +24,15 @@ export function instanceRoutes(
   router.get("/instance/notifications", (_req, res) => {
     const config = opts.getNotificationsConfig();
     res.json(config);
+  });
+
+  // GET /instance/notifications/discord-status
+  router.get("/instance/notifications/discord-status", (_req, res) => {
+    if (!opts.getDiscordStatus) {
+      res.json({ connected: false, provider: "not-discord" });
+      return;
+    }
+    res.json(opts.getDiscordStatus());
   });
 
   // PATCH /instance/notifications — update config

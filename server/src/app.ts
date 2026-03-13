@@ -47,6 +47,7 @@ export async function createApp(
     notificationService: { current: BoardNotificationService };
     reloadNotificationConfig: () => void;
     getNotificationsConfig: () => NotificationsConfig;
+    getDiscordStatus?: () => { connected: boolean };
     betterAuthHandler?: express.RequestHandler;
     resolveSession?: (req: ExpressRequest) => Promise<BetterAuthSessionResult | null>;
   },
@@ -116,6 +117,7 @@ export async function createApp(
   api.use(instanceRoutes(db, {
     reloadNotificationConfig: opts.reloadNotificationConfig,
     getNotificationsConfig: opts.getNotificationsConfig,
+    getDiscordStatus: opts.getDiscordStatus,
   }));
   api.use(goalRoutes(db));
   api.use(approvalRoutes(db));
