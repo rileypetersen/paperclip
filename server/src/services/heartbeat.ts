@@ -538,6 +538,7 @@ export function heartbeatService(db: Db) {
   }
 
   function formatTimeAgo(ms: number): string {
+    if (ms <= 0) return "just now";
     const mins = Math.floor(ms / 60_000);
     if (mins < 60) return `${mins}m ago`;
     const hours = Math.floor(mins / 60);
@@ -560,7 +561,7 @@ export function heartbeatService(db: Db) {
     if (last3.length < 3) return "What could you do to make the most progress right now?";
 
     // 1. Errors
-    if (last3.some((r) => r.status === "failed" || (r.exitCode !== null && r.exitCode !== 0))) {
+    if (last3.some((r) => r.status === "failed")) {
       return "What went wrong? What would you do differently to avoid this failure?";
     }
 
