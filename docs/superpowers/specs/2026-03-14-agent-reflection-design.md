@@ -105,7 +105,7 @@ Total size: ~200-500 chars. Negligible context cost.
 During the existing context assembly phase in `executeRun()` (~line 1280 in `heartbeat.ts`), after workspace and runtime service enrichment, before the context snapshot is persisted to the database:
 
 ```typescript
-context.reflection = await buildReflection(agent.id, agent.companyId, db);
+context.reflection = await buildReflection(agent.id, agent.companyId);
 ```
 
 The context object is already a `Record<string, unknown>` that gets progressively enriched. This is one more field.
