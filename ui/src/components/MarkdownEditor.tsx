@@ -372,7 +372,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
       // Read from ref to avoid stale-closure issues (selectionchange can
       // update state between the last render and this callback firing).
       const state = mentionStateRef.current;
-      if (!state) return;
+      console.log('[DEBUG-MENTION] selectMention called, option:', option?.name, 'state:', state, 'stateRef:', mentionStateRef.current);
+      if (!state) { console.log('[DEBUG-MENTION] selectMention BAILED: state is null'); return; }
+
+      console.log('[DEBUG-MENTION] option.kind:', option.kind, 'option.projectId:', option.projectId);
 
       if (option.kind === "project" && option.projectId) {
         const current = latestValueRef.current;
@@ -392,18 +395,21 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
       }
 
       const replacement = mentionMarkdown(option);
+      console.log('[DEBUG-MENTION] agent path, replacement:', replacement, 'textNode.isConnected:', state.textNode.isConnected, 'textNode.textContent:', JSON.stringify(state.textNode.textContent), 'atPos:', state.atPos, 'endPos:', state.endPos);
 
       // Replace @query directly via DOM selection so the cursor naturally
       // lands after the inserted text. Lexical picks up the change through
       // its normal input-event handling.
       const sel = window.getSelection();
+      console.log('[DEBUG-MENTION] sel:', !!sel, 'sel?.rangeCount:', sel?.rangeCount);
       if (sel && state.textNode.isConnected) {
         const range = document.createRange();
         range.setStart(state.textNode, state.atPos);
         range.setEnd(state.textNode, state.endPos);
         sel.removeAllRanges();
         sel.addRange(range);
-        document.execCommand("insertText", false, replacement);
+        const execResult = document.execCommand("insertText", false, replacement);
+        console.log('[DEBUG-MENTION] execCommand result:', execResult, 'textNode after:', JSON.stringify(state.textNode.textContent));
 
         // After Lexical reconciles the DOM, the cursor position set by
         // execCommand may be lost. Explicitly reposition it after the
@@ -485,6 +491,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
         className,
       )}
       onKeyDownCapture={(e) => {
+        // DEBUG: trace mention keyboard handling
+        if (e.key === "Tab" || e.key === "Enter" || e.key === "ArrowDown" || e.key === "ArrowUp") {
+          console.log('[DEBUG-MENTION] onKeyDownCapture key:', e.key, 'mentionActive:', mentionActive, 'mentionState:', mentionState, 'filteredMentions.length:', filteredMentions.length, 'mentionIndex:', mentionIndex, 'mentionStateRef.current:', mentionStateRef.current);
+        }
         // Cmd/Ctrl+Enter to submit
         if (onSubmit && e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();

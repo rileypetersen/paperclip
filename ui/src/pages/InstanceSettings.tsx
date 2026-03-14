@@ -224,7 +224,7 @@ function NotificationsSection() {
     provider: "disabled",
     boardEmails: [],
     webhookUrl: "",
-    discord: { channelId: "", userMappings: [] },
+    discord: { botToken: "", channelId: "", userMappings: [] },
     command: { path: "", args: [] },
     stalledThresholdMinutes: 240,
     stalledCooldownMinutes: 1440,
@@ -305,6 +305,29 @@ function NotificationsSection() {
         {form.provider === "discord" && (
           <>
             <div>
+              <label className="text-sm font-medium">Bot Token</label>
+              <input
+                type="password"
+                className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                placeholder="Discord bot token"
+                value={form.discord?.botToken ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    discord: {
+                      ...form.discord,
+                      botToken: e.target.value,
+                      channelId: form.discord?.channelId ?? "",
+                      userMappings: form.discord?.userMappings ?? [],
+                    },
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                From Discord Developer Portal → Bot → Token. Env var PAPERCLIP_DISCORD_BOT_TOKEN overrides this.
+              </p>
+            </div>
+            <div>
               <label className="text-sm font-medium">Channel ID</label>
               <input
                 type="text"
@@ -373,9 +396,6 @@ function NotificationsSection() {
                 + Add mapping
               </button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Set PAPERCLIP_DISCORD_BOT_TOKEN env var before enabling
-            </p>
           </>
         )}
 

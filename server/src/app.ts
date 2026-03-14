@@ -27,6 +27,7 @@ import { accessRoutes } from "./routes/access.js";
 import { applyUiBranding } from "./ui-branding.js";
 import type { BetterAuthSessionResult } from "./auth/better-auth.js";
 import type { BoardNotificationService } from "./services/index.js";
+import type { NotificationDeliveryProvider } from "./services/notifications.js";
 import type { NotificationsConfig } from "./config.js";
 import { instanceRoutes } from "./routes/instance.js";
 
@@ -48,6 +49,7 @@ export async function createApp(
     reloadNotificationConfig: () => void;
     getNotificationsConfig: () => NotificationsConfig;
     getDiscordStatus?: () => { connected: boolean };
+    getDiscordProvider?: () => NotificationDeliveryProvider | null;
     betterAuthHandler?: express.RequestHandler;
     resolveSession?: (req: ExpressRequest) => Promise<BetterAuthSessionResult | null>;
   },
@@ -118,6 +120,7 @@ export async function createApp(
     reloadNotificationConfig: opts.reloadNotificationConfig,
     getNotificationsConfig: opts.getNotificationsConfig,
     getDiscordStatus: opts.getDiscordStatus,
+    getDiscordProvider: opts.getDiscordProvider,
   }));
   api.use(goalRoutes(db));
   api.use(approvalRoutes(db));

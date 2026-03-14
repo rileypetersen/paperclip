@@ -943,6 +943,12 @@ export function issueRoutes(db: Db, storage: StorageService, notifications: { cu
       },
     });
 
+    // Check for board notification markers (BOARD-QUESTION / BOARD-BLOCKED)
+    await notifications.current.notifyIssueComment({
+      issue: currentIssue,
+      comment,
+    });
+
     // Merge all wakeups from this comment into one enqueue per agent to avoid duplicate runs.
     void (async () => {
       const wakeups = new Map<string, Parameters<typeof heartbeat.wakeup>[1]>();

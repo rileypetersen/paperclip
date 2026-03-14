@@ -11,7 +11,10 @@ export type BoardNotificationKind =
   | "board_assigned"
   | "board_blocked"
   | "board_question"
-  | "board_stalled";
+  | "board_stalled"
+  | "issue_created"
+  | "issue_status_changed"
+  | "issue_comment";
 
 export interface IssueNotificationSnapshot {
   id: string;
@@ -56,6 +59,7 @@ export interface BoardNotificationPayload {
   comment?: {
     id: string;
     bodySnippet: string;
+    fullBody?: string;
     authorType: "agent" | "user";
     authorId: string;
   };
@@ -167,6 +171,15 @@ function buildNotificationReason(input: {
   if (input.kind === "board_question") {
     return `Board question: ${input.marker?.summaryLine ?? "Action requested from the Board."}`;
   }
+  if (input.kind === "issue_created") {
+    return `New issue created: ${input.issue.identifier ?? input.issue.id}`;
+  }
+  if (input.kind === "issue_status_changed") {
+    return `Issue ${input.issue.identifier ?? input.issue.id} status changed to ${input.issue.status}.`;
+  }
+  if (input.kind === "issue_comment") {
+    return `New comment on ${input.issue.identifier ?? input.issue.id}.`;
+  }
   return `Issue has been stale for at least ${input.thresholdMinutes ?? 0} minutes.`;
 }
 
@@ -174,6 +187,9 @@ function buildNotificationSubject(kind: BoardNotificationKind, identifier: strin
   if (kind === "board_assigned") return `[Paperclip][Board] New assignment: ${identifier} ${title}`;
   if (kind === "board_blocked") return `[Paperclip][Board] Blocked: ${identifier} ${title}`;
   if (kind === "board_question") return `[Paperclip][Board] Question: ${identifier} ${title}`;
+  if (kind === "issue_created") return `[Paperclip] Created: ${identifier} ${title}`;
+  if (kind === "issue_status_changed") return `[Paperclip] Updated: ${identifier} ${title}`;
+  if (kind === "issue_comment") return `[Paperclip] Comment: ${identifier} ${title}`;
   return `[Paperclip][Board] Stalled: ${identifier} ${title}`;
 }
 
@@ -212,6 +228,9 @@ function formatDiscordPayload(notification: BoardNotificationPayload) {
     board_blocked: 0xed4245,
     board_stalled: 0xfee75c,
     board_question: 0x57f287,
+    issue_created: 0x5865f2,
+    issue_status_changed: 0xf0b232,
+    issue_comment: 0x99aab5,
   };
   return {
     embeds: [
@@ -396,7 +415,8 @@ export function createNotificationService(input: {
     if (input.config.provider === "disabled" || !baseUrl) {
       return false;
     }
-    if (recipients.length === 0 && input.config.provider !== "webhook") {
+    if (recipients.length === 0 && input.config.provider !== "webhook" && input.config.provider !== "discord") {
+      logger.info("sendNotification skipped: no recipients");
       return false;
     }
 
@@ -425,6 +445,7 @@ export function createNotificationService(input: {
         ? {
             id: args.comment.id,
             bodySnippet: args.commentSnippet,
+            fullBody: args.comment.body,
             authorType: args.comment.authorUserId ? ("user" as const) : ("agent" as const),
             authorId: args.comment.authorUserId ?? args.comment.authorAgentId ?? "unknown",
           }
@@ -522,21 +543,23 @@ export function createNotificationService(input: {
 
   return {
     async notifyIssueCreated(issue) {
-      if (!issue.assigneeUserId) return;
       const company = await loadCompany(issue.companyId);
       if (!company) return;
+      const kind = issue.assigneeUserId ? "board_assigned" : "issue_created";
       await sendNotification({
-        kind: "board_assigned",
+        kind,
         issue,
         company,
         detectedAt: new Date(),
-        reason: buildNotificationReason({ kind: "board_assigned", issue }),
+        reason: buildNotificationReason({ kind, issue }),
       });
     },
 
     async notifyIssueUpdated({ before, after }) {
-      const company = after.assigneeUserId ? await loadCompany(after.companyId) : null;
-      if (after.assigneeUserId && after.assigneeUserId !== before.assigneeUserId && company) {
+      const company = await loadCompany(after.companyId);
+      if (!company) return;
+      // Board assignment
+      if (after.assigneeUserId && after.assigneeUserId !== before.assigneeUserId) {
         await sendNotification({
           kind: "board_assigned",
           issue: after,
@@ -545,40 +568,32 @@ export function createNotificationService(input: {
           reason: buildNotificationReason({ kind: "board_assigned", issue: after }),
         });
       }
-      if (
-        after.assigneeUserId &&
-        before.status !== "blocked" &&
-        after.status === "blocked" &&
-        company
-      ) {
+      // Status change
+      if (before.status !== after.status) {
+        const kind = after.status === "blocked" ? "board_blocked" : "issue_status_changed";
         await sendNotification({
-          kind: "board_blocked",
+          kind,
           issue: after,
           company,
           detectedAt: new Date(),
-          reason: buildNotificationReason({ kind: "board_blocked", issue: after }),
+          reason: buildNotificationReason({ kind, issue: after }),
         });
       }
     },
 
     async notifyIssueComment({ issue, comment }) {
-      if (!issue.assigneeUserId) return;
-      const marker = parseBoardNotificationMarker(comment.body);
-      if (!marker) return;
       const company = await loadCompany(issue.companyId);
       if (!company) return;
+      const marker = parseBoardNotificationMarker(comment.body);
+      const kind = marker?.kind ?? "issue_comment";
       await sendNotification({
-        kind: marker.kind,
+        kind,
         issue,
         company,
         detectedAt: new Date(),
-        reason: buildNotificationReason({
-          kind: marker.kind,
-          issue,
-          marker,
-        }),
+        reason: buildNotificationReason({ kind, issue, marker }),
         comment,
-        commentSnippet: marker.bodySnippet,
+        commentSnippet: marker?.bodySnippet ?? comment.body.slice(0, 200),
       });
     },
 

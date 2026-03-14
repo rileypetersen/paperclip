@@ -8,7 +8,7 @@ import {
   Options,
 } from "discord.js";
 import type { Db } from "@paperclipai/db";
-import { discordThreadMappings } from "@paperclipai/db";
+import { discordThreadMappings, issues, agents } from "@paperclipai/db";
 import { eq } from "drizzle-orm";
 import type { BoardNotificationPayload, BoardNotificationKind, NotificationDeliveryProvider } from "./notifications.js";
 import { logger } from "../middleware/logger.js";
@@ -29,6 +29,9 @@ const NOTIFICATION_COLORS: Record<BoardNotificationKind, number> = {
   board_blocked: 0xed4245,
   board_stalled: 0xfee75c,
   board_question: 0x57f287,
+  issue_created: 0x5865f2,
+  issue_status_changed: 0xf0b232,
+  issue_comment: 0x99aab5,
 };
 
 function buildMentionPrefix(userMappings: Array<{ discordUserId: string }>): string {
@@ -157,16 +160,21 @@ export class DiscordNotificationProvider implements NotificationDeliveryProvider
   }
 
   private buildEmbed(notification: BoardNotificationPayload): EmbedBuilder {
+    const description = notification.comment?.fullBody
+      ?? notification.comment?.bodySnippet
+      ?? notification.trigger.reason;
+    const truncatedDescription = description.length > 4096
+      ? description.slice(0, 4093) + "..."
+      : description;
+
+    const authorName = notification.comment
+      ? `${notification.comment.authorId}`
+      : notification.issue.identifier;
+
     return new EmbedBuilder()
-      .setTitle(`[${notification.kind}] ${notification.issue.identifier} ${notification.issue.title}`)
-      .setDescription(notification.trigger.reason)
-      .setURL(notification.issue.url)
-      .setColor(NOTIFICATION_COLORS[notification.kind] ?? 0x5865f2)
-      .addFields(
-        { name: "Company", value: notification.company.name, inline: true },
-        { name: "Status", value: notification.issue.status, inline: true },
-      )
-      .setFooter({ text: "Paperclip Board Notification" });
+      .setAuthor({ name: authorName, url: notification.issue.url })
+      .setDescription(truncatedDescription)
+      .setColor(NOTIFICATION_COLORS[notification.kind] ?? 0x5865f2);
   }
 
   private async handleInboundMessage(message: Message): Promise<void> {
@@ -195,11 +203,35 @@ export class DiscordNotificationProvider implements NotificationDeliveryProvider
     );
     if (!userMapping) return;
 
-    // Post comment
+    // Look up the issue's assignee agent to prepend @mention
+    let mentionPrefix = "";
+    try {
+      const issue = await this.deps.db
+        .select({ assigneeAgentId: issues.assigneeAgentId })
+        .from(issues)
+        .where(eq(issues.id, mapping.issueId))
+        .limit(1)
+        .then((rows) => rows[0] ?? null);
+      if (issue?.assigneeAgentId) {
+        const agent = await this.deps.db
+          .select({ urlKey: agents.urlKey, name: agents.name })
+          .from(agents)
+          .where(eq(agents.id, issue.assigneeAgentId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null);
+        if (agent) {
+          mentionPrefix = `@${agent.urlKey ?? agent.name} `;
+        }
+      }
+    } catch {
+      // Best-effort — post without mention if lookup fails
+    }
+
+    // Post comment with agent @mention prefix
     try {
       await this.deps.onInboundComment(
         mapping.issueId,
-        message.content,
+        mentionPrefix + message.content,
         userMapping.paperclipUserId,
       );
       await message.react("✅");

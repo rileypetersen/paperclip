@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Db } from "@paperclipai/db";
-import { companies } from "@paperclipai/db";
+import { companies, issues } from "@paperclipai/db";
+import { eq } from "drizzle-orm";
 import { notificationsConfigSchema } from "@paperclipai/shared";
 import type { NotificationDeliveryProvider } from "../services/notifications.js";
 import { createWebhookNotificationProvider, createCommandNotificationProvider } from "../services/notifications.js";
@@ -16,6 +17,7 @@ export function instanceRoutes(
     reloadNotificationConfig: () => void;
     getNotificationsConfig: () => NotificationsConfig;
     getDiscordStatus?: () => { connected: boolean };
+    getDiscordProvider?: () => NotificationDeliveryProvider | null;
   },
 ) {
   const router = Router();
@@ -65,7 +67,7 @@ export function instanceRoutes(
   });
 
   // POST /instance/notifications/test — send test notification
-  router.post("/instance/notifications/test", async (_req, res) => {
+  router.post("/instance/notifications/test", async (req, res) => {
     const now = Date.now();
     if (now - lastTestAt < 10_000) {
       res.status(429).json({ error: "Please wait 10 seconds between test notifications" });
@@ -80,17 +82,20 @@ export function instanceRoutes(
     }
 
     // Build provider from current config
-    let provider: NotificationDeliveryProvider;
+    let provider: NotificationDeliveryProvider | null = null;
     if (config.provider === "webhook" && config.webhookUrl) {
       provider = createWebhookNotificationProvider(config.webhookUrl);
     } else if (config.provider === "command") {
       provider = createCommandNotificationProvider(config);
-    } else {
+    } else if (config.provider === "discord") {
+      provider = opts.getDiscordProvider?.() ?? null;
+    }
+    if (!provider) {
       res.status(400).json({ error: `Provider "${config.provider}" is not configured` });
       return;
     }
 
-    // Get first company for realistic test data
+    // Get real company + issue for realistic test data
     const companyRow = await db
       .select({ id: companies.id, name: companies.name, issuePrefix: companies.issuePrefix })
       .from(companies)
@@ -99,21 +104,32 @@ export function instanceRoutes(
 
     const companyName = companyRow?.name ?? "Test Company";
     const prefix = companyRow?.issuePrefix ?? "TEST";
+    const companyId = companyRow?.id ?? "00000000-0000-0000-0000-000000000000";
+
+    // Use a real issue so Discord thread mapping works
+    const issueRow = companyRow
+      ? await db
+          .select({ id: issues.id, identifier: issues.identifier, title: issues.title, status: issues.status })
+          .from(issues)
+          .where(eq(issues.companyId, companyRow.id))
+          .limit(1)
+          .then((rows) => rows[0] ?? null)
+      : null;
 
     const result = await provider.deliver({
       kind: "board_assigned",
       notificationId: `test:${Date.now()}`,
       company: {
-        id: companyRow?.id ?? "test",
+        id: companyId,
         name: companyName,
         issuePrefix: prefix,
       },
       issue: {
-        id: "test",
-        identifier: `${prefix}-0`,
-        title: "Test notification from Paperclip",
-        status: "todo",
-        url: "#",
+        id: issueRow?.id ?? companyId,
+        identifier: issueRow?.identifier ?? `${prefix}-0`,
+        title: issueRow?.title ?? "Test notification from Paperclip",
+        status: issueRow?.status ?? "todo",
+        url: `${req.protocol}://${req.get("host")}/${prefix}/issues/${issueRow?.id ?? ""}`,
       },
       recipients: config.boardEmails,
       trigger: {

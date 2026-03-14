@@ -107,8 +107,9 @@ export const discordUserMappingSchema = z.object({
 });
 
 export const discordConfigSchema = z.object({
+  botToken: z.string().optional(),
   channelId: z.string().min(1),
-  userMappings: z.array(discordUserMappingSchema).min(1),
+  userMappings: z.array(discordUserMappingSchema).default([]),
 });
 
 export const notificationsConfigSchema = z.object({

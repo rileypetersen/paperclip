@@ -118,7 +118,7 @@ export function resolveNotificationsConfig(): NotificationsConfig {
   const fileDiscord = fileNotifications?.discord;
   const discord = fileDiscord
     ? {
-        botToken: discordBotToken,
+        botToken: discordBotToken || fileDiscord.botToken?.trim() || undefined,
         channelId: fileDiscord.channelId,
         userMappings: [...fileDiscord.userMappings],
       }

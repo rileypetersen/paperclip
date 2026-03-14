@@ -1,6 +1,6 @@
 CREATE TABLE "discord_thread_mappings" (
 	"thread_id" text PRIMARY KEY NOT NULL,
-	"issue_id" text NOT NULL,
+	"issue_id" uuid NOT NULL,
 	"channel_message_id" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );

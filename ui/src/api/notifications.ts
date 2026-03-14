@@ -5,6 +5,7 @@ export interface NotificationsConfig {
   boardEmails: string[];
   webhookUrl?: string;
   discord?: {
+    botToken?: string;
     channelId: string;
     userMappings: Array<{ discordUserId: string; paperclipUserId: string }>;
   };

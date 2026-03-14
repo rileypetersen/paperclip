@@ -582,6 +582,7 @@ export async function startServer(): Promise<StartedServer> {
     reloadNotificationConfig,
     getNotificationsConfig: () => resolveNotificationsConfig(),
     getDiscordStatus: () => ({ connected: discordProvider?.isConnected ?? false }),
+    getDiscordProvider: () => discordProvider,
     betterAuthHandler,
     resolveSession,
   });
