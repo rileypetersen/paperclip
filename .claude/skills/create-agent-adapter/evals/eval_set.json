@@ -1,0 +1,22 @@
+[
+  {"query": "Build a new adapter so Paperclip can use Gemini as an agent runtime", "should_trigger": true},
+  {"query": "I need to create an adapter for the OpenAI API", "should_trigger": true},
+  {"query": "How do I extend the agent runtime to support a new AI tool?", "should_trigger": true},
+  {"query": "Walk me through creating a new adapter module from scratch", "should_trigger": true},
+  {"query": "Debug the session codec in the claude-local adapter", "should_trigger": true},
+  {"query": "What interfaces does a new adapter need to implement?", "should_trigger": true},
+  {"query": "Add Mistral support by creating a new adapter", "should_trigger": true},
+  {"query": "The adapter's execute function is returning malformed results — help me debug", "should_trigger": true},
+  {"query": "Show me the adapter registration points in the codebase", "should_trigger": true},
+  {"query": "Create the server, UI, and CLI modules for a new Llama adapter", "should_trigger": true},
+  {"query": "Create a new agent to join the team", "should_trigger": false},
+  {"query": "Update the system prompt for the CTO agent", "should_trigger": false},
+  {"query": "Add a new API endpoint to the server", "should_trigger": false},
+  {"query": "Refactor the authentication middleware", "should_trigger": false},
+  {"query": "Write a plugin for VS Code", "should_trigger": false},
+  {"query": "Set up a webhook integration with GitHub", "should_trigger": false},
+  {"query": "Configure the CI/CD pipeline for automated testing", "should_trigger": false},
+  {"query": "How does the agent execution system work?", "should_trigger": false},
+  {"query": "Review the PR that adds adapter configuration options", "should_trigger": false},
+  {"query": "Restart the agent that's using the claude-local adapter", "should_trigger": false}
+]

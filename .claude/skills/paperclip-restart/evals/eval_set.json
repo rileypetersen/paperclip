@@ -1,0 +1,22 @@
+[
+  {"query": "The Paperclip server is not responding, please restart it", "should_trigger": true},
+  {"query": "Heartbeats have been stuck for 10 minutes, bounce the server", "should_trigger": true},
+  {"query": "I'm getting connection refused errors from the Paperclip API", "should_trigger": true},
+  {"query": "Health check is failing — restart the server", "should_trigger": true},
+  {"query": "Just ran a database migration, need to restart the server", "should_trigger": true},
+  {"query": "The API is returning 500 errors on every request", "should_trigger": true},
+  {"query": "Kill the running Paperclip process and start it fresh", "should_trigger": true},
+  {"query": "Server config changed, need a restart to pick up the new settings", "should_trigger": true},
+  {"query": "Paperclip is unresponsive after the deploy, bounce it", "should_trigger": true},
+  {"query": "The server seems hung — no agents are getting responses", "should_trigger": true},
+  {"query": "Check what tasks are assigned to me in Paperclip", "should_trigger": false},
+  {"query": "Post a comment on issue #42 about the server outage", "should_trigger": false},
+  {"query": "Debug why my Node.js application is crashing on startup", "should_trigger": false},
+  {"query": "Restart my local development server for the React app", "should_trigger": false},
+  {"query": "The CI pipeline is failing — investigate and fix", "should_trigger": false},
+  {"query": "Ship the latest release to production", "should_trigger": false},
+  {"query": "Send an email to the team about the downtime", "should_trigger": false},
+  {"query": "Write a script to monitor server health", "should_trigger": false},
+  {"query": "Review the PR that changes server configuration", "should_trigger": false},
+  {"query": "Remember that we need to restart after config changes", "should_trigger": false}
+]

@@ -1,0 +1,57 @@
+{
+  "skill_name": "opstimizer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How are my agents doing? Anything we should tune?",
+      "expected_output": "A data-driven ops review with quick stats and 1-2 concrete suggestions with diffs, not generic advice",
+      "files": [],
+      "expectations": [
+        "Output cites specific evidence (file names, token counts, run data, or issue references)",
+        "Output includes a code diff showing exact before/after changes",
+        "Output limits suggestions to 1-2 improvements, not a laundry list",
+        "Output includes quantitative summary (runs analyzed, failure rate, or similar stats)",
+        "Each suggestion is specific enough to implement in under 5 minutes"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Our COO agent keeps timing out and the marketer hasn't done anything useful in 3 days. Run an ops review.",
+      "expected_output": "Focused analysis on COO timeouts and marketer inactivity with specific config/prompt changes to fix both",
+      "files": [],
+      "expectations": [
+        "Output addresses COO timeout issue specifically with a root cause",
+        "Output addresses marketer inactivity with evidence of what the marketer actually did or didn't do",
+        "Output includes a code diff showing exact before/after changes",
+        "Output limits suggestions to 1-2 improvements, not a laundry list",
+        "Each suggestion is specific enough to implement in under 5 minutes"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "We're burning too many tokens. Find me the biggest waste and tell me exactly what to change.",
+      "expected_output": "Token usage analysis identifying the highest-waste agent/pattern with an exact diff to reduce it",
+      "files": [],
+      "expectations": [
+        "Output identifies specific token waste with estimated token counts or byte sizes",
+        "Output includes a code diff showing exact before/after changes",
+        "Output limits suggestions to 1-2 improvements, not a laundry list",
+        "Output quantifies the expected savings from the proposed changes",
+        "Each suggestion is specific enough to implement in under 5 minutes"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I haven't gotten an email from CEO in a week. Why?",
+      "expected_output": "Investigation into CEO agent activity, identifying why communication dropped, with a suggestion to add proactive email/reporting behavior",
+      "files": [],
+      "expectations": [
+        "Output identifies a root cause for the missing CEO emails (config gap, server down, or similar)",
+        "Output connects the indirect complaint to a specific operational gap rather than just saying 'check your email settings'",
+        "Output includes a code diff showing exact before/after changes",
+        "Output limits suggestions to 1-2 improvements, not a laundry list",
+        "Each suggestion is specific enough to implement in under 5 minutes"
+      ]
+    }
+  ]
+}

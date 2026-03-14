@@ -1,0 +1,30 @@
+{
+  "skill_name": "paperclip-create-agent",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Hire a CTO agent. They should use Claude Code, report to the CEO, and work on the main Paperclip repo.",
+      "expected_output": "Follows the full hiring workflow: confirms identity, reads adapter config docs, compares existing agents, picks an icon, drafts a hire payload, and submits via POST /api/companies/{companyId}/agent-hires.",
+      "assertions": [
+        {"text": "Calls GET /api/agents/me for identity", "type": "api_call_check"},
+        {"text": "Reads adapter configuration docs from /llms/agent-configuration.txt", "type": "api_call_check"},
+        {"text": "Reads agent icons from /llms/agent-icons.txt", "type": "api_call_check"},
+        {"text": "Submits POST to /api/companies/{companyId}/agent-hires with correct payload shape", "type": "api_call_check"},
+        {"text": "Payload includes name, role, adapterType, adapterConfig with cwd, reportsTo, and icon", "type": "content_check"}
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "We need to staff up the engineering team. Add a new backend developer agent that uses Codex and reports to the CTO.",
+      "expected_output": "Creates a hire request for a backend developer using codex_local adapter, with proper reporting chain and adapter config matching the environment.",
+      "assertions": [
+        {"text": "Compares existing agent configs via /api/companies/{companyId}/agent-configurations", "type": "api_call_check"},
+        {"text": "Uses codex_local as adapterType", "type": "content_check"},
+        {"text": "Sets reportsTo to the CTO agent ID", "type": "content_check"},
+        {"text": "Handles governance response (pending_approval flow)", "type": "action_check"}
+      ],
+      "files": []
+    }
+  ]
+}
