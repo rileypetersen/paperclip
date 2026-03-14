@@ -62,6 +62,7 @@ export interface BoardNotificationPayload {
     fullBody?: string;
     authorType: "agent" | "user";
     authorId: string;
+    authorName?: string;
   };
   email: {
     subject: string;
