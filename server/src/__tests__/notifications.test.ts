@@ -3,6 +3,18 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@paperclipai/db";
+
+function mockDb(): Db {
+  const chainable: any = {
+    select: () => chainable,
+    from: () => chainable,
+    where: () => chainable,
+    orderBy: () => chainable,
+    limit: () => chainable,
+    then: (resolve: (v: any) => void) => Promise.resolve([]).then(resolve),
+  };
+  return chainable as Db;
+}
 import type { NotificationsConfig } from "../config.ts";
 import {
   createCommandNotificationProvider,
@@ -199,7 +211,7 @@ describe("notification service triggers", () => {
     });
 
     const service = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig(),
       repository,
       provider,
@@ -220,7 +232,7 @@ describe("notification service triggers", () => {
     const provider = createProvider();
     const { repository } = createRepository();
     const service = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig(),
       repository,
       provider,
@@ -244,7 +256,7 @@ describe("notification service triggers", () => {
     const provider = createProvider();
     const { repository } = createRepository();
     const service = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig(),
       repository,
       provider,
@@ -268,7 +280,7 @@ describe("notification service triggers", () => {
     const provider = createProvider();
     const { repository } = createRepository();
     const service = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig(),
       repository,
       provider,
@@ -306,6 +318,7 @@ describe("notification service triggers", () => {
     expect(provider.sent.map((item) => item.kind)).toEqual([
       "board_question",
       "board_blocked",
+      "issue_comment",
     ]);
   });
 
@@ -314,7 +327,7 @@ describe("notification service triggers", () => {
     const runtimeProvider = createProvider();
     const { repository } = createRepository();
     const publicService = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig(),
       repository,
       provider,
@@ -322,7 +335,7 @@ describe("notification service triggers", () => {
       runtimeBaseUrl: "http://runtime",
     });
     const runtimeService = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig(),
       repository,
       provider: runtimeProvider,
@@ -340,7 +353,7 @@ describe("notification service triggers", () => {
     const provider = createProvider(async () => ({ ok: false, error: "command failed" }));
     const { repository } = createRepository();
     const service = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig(),
       repository,
       provider,
@@ -390,7 +403,7 @@ describe("notification service stalled work scheduling", () => {
     });
 
     const service = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig({
         stalledThresholdMinutes: 240,
         stalledCooldownMinutes: 60,
@@ -437,7 +450,7 @@ describe("notification service stalled work scheduling", () => {
       ],
     });
     const service = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig({
         stalledThresholdMinutes: 240,
         stalledCooldownMinutes: 60,
@@ -459,7 +472,7 @@ describe("notification service stalled work scheduling", () => {
       staleIssues: [],
     });
     const updatedService = createNotificationService({
-      db: {} as Db,
+      db: mockDb(),
       config: makeConfig({
         stalledThresholdMinutes: 240,
         stalledCooldownMinutes: 60,
@@ -491,7 +504,7 @@ describe("webhook notification with empty boardEmails", () => {
     const config = makeConfig({ provider: "webhook", boardEmails: [] });
     const { repository } = createRepository();
     const svc = createNotificationService({
-      db: {} as any,
+      db: mockDb(),
       config,
       provider,
       repository,

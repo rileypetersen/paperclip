@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe("resolveNotificationsConfig", () => {
   it("is disabled by default", () => {
-    delete process.env.PAPERCLIP_CONFIG;
+    process.env.PAPERCLIP_CONFIG = "/tmp/nonexistent-paperclip-config.json";
     delete process.env.PAPERCLIP_NOTIFICATIONS_PROVIDER;
     delete process.env.PAPERCLIP_BOARD_NOTIFICATION_EMAILS;
     delete process.env.PAPERCLIP_STALLED_WORK_THRESHOLD_MINUTES;
