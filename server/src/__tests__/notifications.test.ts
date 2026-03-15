@@ -4,14 +4,14 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@paperclipai/db";
 
-function mockDb(): Db {
+function mockDb(agentRows: Array<{ name: string }> = []): Db {
   const chainable: any = {
     select: () => chainable,
     from: () => chainable,
     where: () => chainable,
     orderBy: () => chainable,
     limit: () => chainable,
-    then: (resolve: (v: any) => void) => Promise.resolve([]).then(resolve),
+    then: (resolve: (v: any) => void) => Promise.resolve(agentRows).then(resolve),
   };
   return chainable as Db;
 }
@@ -320,6 +320,83 @@ describe("notification service triggers", () => {
       "board_blocked",
       "issue_comment",
     ]);
+  });
+
+  it("resolves authorName from agent DB lookup", async () => {
+    const provider = createProvider();
+    const { repository } = createRepository();
+    const service = createNotificationService({
+      db: mockDb([{ name: "Erlich" }]),
+      config: makeConfig(),
+      repository,
+      provider,
+      runtimeBaseUrl: "http://runtime",
+    });
+
+    await service.notifyIssueComment({
+      issue: makeIssue(),
+      comment: {
+        id: "comment-1",
+        body: "BOARD-QUESTION: Need approval",
+        authorAgentId: "agent-1",
+        authorUserId: null,
+      },
+    });
+
+    expect(provider.sent).toHaveLength(1);
+    expect(provider.sent[0]?.comment?.authorName).toBe("Erlich");
+    expect(provider.sent[0]?.comment?.authorId).toBe("agent-1");
+  });
+
+  it("leaves authorName undefined when agent not found", async () => {
+    const provider = createProvider();
+    const { repository } = createRepository();
+    const service = createNotificationService({
+      db: mockDb(), // empty results
+      config: makeConfig(),
+      repository,
+      provider,
+      runtimeBaseUrl: "http://runtime",
+    });
+
+    await service.notifyIssueComment({
+      issue: makeIssue(),
+      comment: {
+        id: "comment-1",
+        body: "BOARD-QUESTION: Need approval",
+        authorAgentId: "agent-1",
+        authorUserId: null,
+      },
+    });
+
+    expect(provider.sent).toHaveLength(1);
+    expect(provider.sent[0]?.comment?.authorName).toBeUndefined();
+  });
+
+  it("skips authorName lookup for user comments", async () => {
+    const provider = createProvider();
+    const { repository } = createRepository();
+    const service = createNotificationService({
+      db: mockDb([{ name: "Should not appear" }]),
+      config: makeConfig(),
+      repository,
+      provider,
+      runtimeBaseUrl: "http://runtime",
+    });
+
+    await service.notifyIssueComment({
+      issue: makeIssue(),
+      comment: {
+        id: "comment-1",
+        body: "BOARD-QUESTION: Need approval",
+        authorAgentId: null,
+        authorUserId: "user-1",
+      },
+    });
+
+    expect(provider.sent).toHaveLength(1);
+    expect(provider.sent[0]?.comment?.authorName).toBeUndefined();
+    expect(provider.sent[0]?.comment?.authorType).toBe("user");
   });
 
   it("uses auth public base URL when configured and runtime URL otherwise", async () => {
