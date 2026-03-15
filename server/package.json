@@ -30,7 +30,7 @@
     "postpack": "rm -rf ui-dist",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm --filter @paperclipai/plugin-sdk build && tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.888.0",
@@ -43,14 +43,19 @@
     "@paperclipai/adapter-pi-local": "workspace:*",
     "@paperclipai/adapter-utils": "workspace:*",
     "@paperclipai/db": "workspace:*",
+    "@paperclipai/plugin-sdk": "workspace:*",
     "@paperclipai/shared": "workspace:*",
+    "ajv": "^8.18.0",
+    "ajv-formats": "^3.0.1",
     "better-auth": "1.4.18",
+    "chokidar": "^4.0.3",
     "detect-port": "^2.1.0",
     "discord.js": "^14.25.1",
     "dotenv": "^17.0.1",
     "drizzle-orm": "^0.38.4",
     "embedded-postgres": "^18.1.0-beta.16",
     "express": "^5.1.0",
+    "hermes-paperclip-adapter": "0.1.1",
     "multer": "^2.0.2",
     "open": "^11.0.0",
     "pino": "^9.6.0",
