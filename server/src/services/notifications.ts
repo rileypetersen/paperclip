@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { activityLog, companies, issues } from "@paperclipai/db";
+import { activityLog, agents, companies, issues } from "@paperclipai/db";
 import type { NotificationProvider as NotificationProviderType } from "@paperclipai/shared";
 import type { NotificationsConfig } from "../config.js";
 import { logger } from "../middleware/logger.js";
@@ -441,16 +441,29 @@ export function createNotificationService(input: {
     }
 
     const issueUrl = `${baseUrl}/issues/${args.issue.id}`;
-    const comment =
-      args.comment && args.commentSnippet
-        ? {
-            id: args.comment.id,
-            bodySnippet: args.commentSnippet,
-            fullBody: args.comment.body,
-            authorType: args.comment.authorUserId ? ("user" as const) : ("agent" as const),
-            authorId: args.comment.authorUserId ?? args.comment.authorAgentId ?? "unknown",
-          }
-        : undefined;
+    let comment: BoardNotificationPayload["comment"] | undefined;
+    if (args.comment && args.commentSnippet) {
+      const authorType = args.comment.authorUserId ? ("user" as const) : ("agent" as const);
+      const authorId = args.comment.authorUserId ?? args.comment.authorAgentId ?? "unknown";
+      let authorName: string | undefined;
+      if (args.comment.authorAgentId) {
+        const agentRow = await input.db
+          .select({ name: agents.name })
+          .from(agents)
+          .where(eq(agents.id, args.comment.authorAgentId))
+          .limit(1)
+          .then((rows) => rows[0] ?? null);
+        authorName = agentRow?.name ?? undefined;
+      }
+      comment = {
+        id: args.comment.id,
+        bodySnippet: args.commentSnippet,
+        fullBody: args.comment.body,
+        authorType,
+        authorId,
+        authorName,
+      };
+    }
 
     const payload: BoardNotificationPayload = {
       kind: args.kind,

@@ -8,8 +8,8 @@ import {
   Options,
 } from "discord.js";
 import type { Db } from "@paperclipai/db";
-import { discordThreadMappings, issues, agents } from "@paperclipai/db";
-import { eq } from "drizzle-orm";
+import { discordThreadMappings, issues, issueComments, agents } from "@paperclipai/db";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import type { BoardNotificationPayload, BoardNotificationKind, NotificationDeliveryProvider } from "./notifications.js";
 import { logger } from "../middleware/logger.js";
 
@@ -138,7 +138,7 @@ export class DiscordNotificationProvider implements NotificationDeliveryProvider
       const embed = this.buildEmbed(notification);
       const message = await textChannel.send({ content: mentionPrefix, embeds: [embed] });
       const threadName = buildThreadName(notification.issue.identifier, notification.issue.title);
-      const thread = await message.startThread({ name: threadName });
+      const thread = await message.startThread({ name: threadName, autoArchiveDuration: 60 });
 
       // Persist mapping
       await this.deps.db
@@ -168,7 +168,7 @@ export class DiscordNotificationProvider implements NotificationDeliveryProvider
       : description;
 
     const authorName = notification.comment
-      ? `${notification.comment.authorId}`
+      ? (notification.comment.authorName ?? notification.comment.authorId)
       : notification.issue.identifier;
 
     return new EmbedBuilder()
@@ -203,28 +203,32 @@ export class DiscordNotificationProvider implements NotificationDeliveryProvider
     );
     if (!userMapping) return;
 
-    // Look up the issue's assignee agent to prepend @mention
+    // Look up the most recent agent who commented on this issue to prepend @mention
     let mentionPrefix = "";
     try {
-      const issue = await this.deps.db
-        .select({ assigneeAgentId: issues.assigneeAgentId })
-        .from(issues)
-        .where(eq(issues.id, mapping.issueId))
+      const lastAgentComment = await this.deps.db
+        .select({ authorAgentId: issueComments.authorAgentId })
+        .from(issueComments)
+        .where(and(
+          eq(issueComments.issueId, mapping.issueId),
+          isNotNull(issueComments.authorAgentId),
+        ))
+        .orderBy(desc(issueComments.createdAt))
         .limit(1)
         .then((rows) => rows[0] ?? null);
-      if (issue?.assigneeAgentId) {
+      if (lastAgentComment?.authorAgentId) {
         const agent = await this.deps.db
-          .select({ urlKey: agents.urlKey, name: agents.name })
+          .select({ name: agents.name })
           .from(agents)
-          .where(eq(agents.id, issue.assigneeAgentId))
+          .where(eq(agents.id, lastAgentComment.authorAgentId))
           .limit(1)
           .then((rows) => rows[0] ?? null);
         if (agent) {
-          mentionPrefix = `@${agent.urlKey ?? agent.name} `;
+          mentionPrefix = `@${agent.name} `;
         }
       }
-    } catch {
-      // Best-effort — post without mention if lookup fails
+    } catch (err) {
+      logger.error({ err }, "failed to resolve agent name for discord mention prefix");
     }
 
     // Post comment with agent @mention prefix
