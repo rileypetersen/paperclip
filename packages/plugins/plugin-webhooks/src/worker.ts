@@ -14,8 +14,8 @@ import { runStalledCheck, resetStalledState, type StalledDeps } from "./stalled.
 let deliveryManager: DeliveryManager;
 let ctx: PluginContext;
 
-function getConfig(): Promise<WebhooksPluginConfig> {
-  return ctx.config.get() as Promise<WebhooksPluginConfig>;
+async function getConfig(): Promise<WebhooksPluginConfig> {
+  return (await ctx.config.get()) as unknown as WebhooksPluginConfig;
 }
 
 async function handleEvent(event: PluginEvent) {
@@ -138,7 +138,7 @@ const plugin = definePlugin({
       if (sdkEvent === "cost_event.created") {
         ctx.events.on(sdkEvent, handleBudgetEvent);
       } else {
-        ctx.events.on(sdkEvent, handleEvent);
+        ctx.events.on(sdkEvent as Parameters<typeof ctx.events.on>[0], handleEvent);
       }
     }
 
@@ -154,8 +154,8 @@ const plugin = definePlugin({
           const companies = await ctx.companies.list();
           return companies.map((c) => ({ id: c.id, name: c.name }));
         },
-        listIssues: async (input) => {
-          const issues = await ctx.issues.list(input);
+        listIssues: async (input: { companyId: string; status: string }) => {
+          const issues = await ctx.issues.list({ companyId: input.companyId, status: input.status as "todo" | "in_progress" | "in_review" | "blocked" });
           return issues.map((i) => ({
             id: i.id,
             title: i.title,
@@ -216,7 +216,7 @@ const plugin = definePlugin({
       return { ok: true };
     });
 
-    ctx.actions.register("send-test", async (params) => {
+    ctx.actions.register("send-test", async (params: Record<string, unknown>) => {
       const endpointIndex = Number(params.endpointIndex ?? 0);
       const config = await getConfig();
       const endpoint = config.endpoints[endpointIndex];
@@ -247,8 +247,8 @@ const plugin = definePlugin({
     ctx.logger.info("Webhooks plugin initialized");
   },
 
-  async onValidateConfig(config) {
-    const result = validateConfig(config as WebhooksPluginConfig);
+  async onValidateConfig(config: Record<string, unknown>) {
+    const result = validateConfig(config as unknown as WebhooksPluginConfig);
     return { ok: result.ok, warnings: result.warnings, errors: result.errors };
   },
 
