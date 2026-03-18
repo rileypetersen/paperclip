@@ -20,6 +20,7 @@ async function getConfig(): Promise<WebhooksPluginConfig> {
 
 async function handleEvent(event: PluginEvent) {
   const config = await getConfig();
+  if (config.companyFilter && event.companyId !== config.companyFilter) return;
   const webhookNames = sdkEventToWebhookNames(event);
 
   for (const webhookName of webhookNames) {
@@ -75,6 +76,7 @@ async function handleEvent(event: PluginEvent) {
 
 async function handleBudgetEvent(event: PluginEvent) {
   const config = await getConfig();
+  if (config.companyFilter && event.companyId !== config.companyFilter) return;
   const endpoints = getEndpointsForEvent(config, "budgetThresholdHit");
   if (endpoints.length === 0) return;
 
@@ -103,8 +105,12 @@ async function handleBudgetEvent(event: PluginEvent) {
 
     const budgetData: BudgetData = { currentSpendCents: spendCents, budgetCents, percentUsed };
     const companyResolver = async (companyId: string) => {
-      const company = await ctx.companies.get(companyId);
-      return company ? { id: company.id, name: company.name } : null;
+      try {
+        const company = await ctx.companies.get(companyId);
+        return company ? { id: company.id, name: company.name } : null;
+      } catch {
+        return null;
+      }
     };
 
     const webhookPayload = await formatPayload(
