@@ -80,7 +80,7 @@ export function createDeliveryManager(deps: DeliveryDeps): DeliveryManager {
 
     inflight.set(endpoint.url, getInflight(endpoint.url) + 1);
     try {
-      const response = await deps.fetch(endpoint.url, { method: "POST", headers, body });
+      const response = await deps.fetch(endpoint.url, { method: "POST", headers, body, signal: AbortSignal.timeout(10_000) });
       httpStatus = response.status;
       success = response.ok;
       if (!success) errorMessage = `HTTP ${response.status}`;

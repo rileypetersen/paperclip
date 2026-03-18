@@ -69,8 +69,6 @@ export async function runStalledCheck(deps: StalledDeps, config: StalledCheckCon
             stalledSince,
             alertedAt: now.toISOString(),
           });
-        } else if (!existing.stalledSince) {
-          await deps.setState("issue", issue.id, "stalled", { ...existing, stalledSince });
         }
       } else if (existing.stalledSince) {
         await deps.setState("issue", issue.id, "stalled", { stalledSince: null, alertedAt: null });
